@@ -1,0 +1,14 @@
+{
+    "manifest_version": 3,
+    "name": "Geolocation Spoofer",
+    "version": "1.4",
+    "description": "Spoof geolocation based on custom latitude and longitude.",
+    "permissions": ["scripting", "webNavigation", "storage", "nativeMessaging"],
+    "host_permissions": ["<all_urls>"],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_popup": "popup.html"
+    }
+}

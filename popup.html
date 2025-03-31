@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geolocation Spoofer</title>
+  <link rel="stylesheet" href="popup.css">
+  <script src="popup.js" defer></script>
+</head>
+<body>
+  <h1>Geolocation Spoofer</h1>
+  <div class="container">
+    <div class="toggle">
+      <label for="enabled">Spoofer Enabled:</label>
+      <input type="checkbox" id="enabled">
+    </div>
+    <label for="latitude">Latitude:</label>
+    <input type="text" id="latitude" placeholder="e.g., 37.7749">
+    <label for="longitude">Longitude:</label>
+    <input type="text" id="longitude" placeholder="e.g., -122.4194">
+    <label for="accuracy">Accuracy (meters):</label>
+    <input type="number" id="accuracy" placeholder="e.g., 100">
+    <div class="toggle">
+      <label for="toggleRandomization">Randomization (uses accuracy value):</label>
+      <input type="checkbox" id="toggleRandomization">
+    </div>
+    <button id="confirmData">Confirm Data</button>
+    <div class="status" id="status">Loading current configuration...</div>
+  </div>
+</body>
+</html>
