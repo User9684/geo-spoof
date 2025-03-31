@@ -25,21 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     );
 
-    enabledToggle.addEventListener("change", () => {
-        chrome.storage.local.set({ enabled: enabledToggle.checked }, () => {
-            updateStatus();
-        });
-    });
-
-    randomizationToggle.addEventListener("change", () => {
-        chrome.storage.local.set(
-            { toggleRandomization: randomizationToggle.checked },
-            () => {
-                updateStatus();
-            }
-        );
-    });
-
     document.getElementById("confirmRawData").addEventListener("click", () => {
         try {
             const newData = JSON.parse(rawDataInput.value);
@@ -72,6 +57,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const latitudeValue = parseFloat(latitudeInput.value);
         const longitudeValue = parseFloat(longitudeInput.value);
         const accuracyValue = parseInt(accuracyInput.value);
+        const enabledValue = enabledToggle.checked;
+        const randomizationEnabledValue = toggleRandomization.checked;
 
         if (
             isNaN(latitudeValue) ||
@@ -90,9 +77,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 latitude: latitudeValue,
                 longitude: longitudeValue,
                 accuracy: accuracyValue,
+                enabled: enabledValue,
+                toggleRandomization: randomizationEnabledValue,
             },
             () => {
-                alert("Location and accuracy set successfully!");
+                alert("Settings set successfully!");
                 updateStatus();
             }
         );
