@@ -1,9 +1,6 @@
 // background.js - User9684
 
-// This javascript files handling script injection for pages, and will inject into
-// pages not explicitly disabled as per configuration.
-
-const ignoredPrefixes = ["chrome://", "chrome-extension://", "extension://"];
+// This javascript files handling script injection for pages, and will inject into pages
 
 chrome.runtime.onInstalled.addListener(async () => {
     const existingData = await chrome.storage.local.get([
@@ -24,14 +21,8 @@ chrome.runtime.onInstalled.addListener(async () => {
     });
 });
 
-chrome.webNavigation.onCompleted.addListener(
-    (details) => {
-        for (const prefix of ignoredPrefixes) {
-            if (details.url.startsWith(prefix)) {
-                return;
-            }
-        }
-
+chrome.runtime.onInstalled.addListener(
+    () => {
         chrome.scripting.registerContentScripts([
             {
                 id: "gs-client",
@@ -46,6 +37,5 @@ chrome.webNavigation.onCompleted.addListener(
                 js: ["handler.js"],
             },
         ]);
-    },
-    { url: [{ urlMatches: ".*" }] }
+    }
 );
