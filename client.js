@@ -38,53 +38,21 @@
     }
 
     function generateSpoofedFunction(originalFunction, newFunction) {
-        const originalToString =
-            originalFunction.toString.bind(originalFunction);
-
         function spoofedFunction(...args) {
-            return newFunction(...args);
+          return newFunction(...args);
         }
-
+    
         Object.setPrototypeOf(
-            spoofedFunction,
-            Object.getPrototypeOf(originalFunction)
+          spoofedFunction,
+          Object.getPrototypeOf(originalFunction)
         );
-
-        // Fake native toString
-        function spoofedToString() {
-            return "function toString() { [native code] }";
-        }
-
-        // Creates a new proxy for infinite toString replacement
-        function createRecursiveToString() {
-            return new Proxy(spoofedToString, {
-                apply() {
-                    return "function toString() { [native code] }";
-                },
-                get(target, prop) {
-                    if (prop === "toString") {
-                        return createRecursiveToString();
-                    }
-                    return Reflect.get(target, prop);
-                },
-            });
-        }
-
-        const infiniteToString = createRecursiveToString();
-
-        // Spoof root toString
+    
         Object.defineProperty(spoofedFunction, "toString", {
-            value: originalToString,
-            writable: true,
+          value: originalFunction.toString.bind(originalFunction),
+          writable: true,
+          configurable: true,
         });
-
-        // Define spoofed native toString
-        Object.defineProperty(spoofedFunction.toString, "toString", {
-            value: infiniteToString,
-            writable: true,
-            configurable: false,
-        });
-
+    
         return spoofedFunction;
     }
 
