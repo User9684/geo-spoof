@@ -12,30 +12,37 @@ chrome.runtime.onInstalled.addListener(async () => {
     ]);
 
     chrome.storage.local.set({
-        latitude: existingData.latitude || 0,
-        longitude: existingData.longitude || 0,
-        accuracy: existingData.accuracy || 100,
-        toggleRandomization:
-            existingData.toggleRandomization !== undefined || false,
-        enabled: existingData.enabled !== undefined || true,
+        latitude: existingData.latitude ?? 0,
+        longitude: existingData.longitude ?? 0,
+        accuracy: existingData.accuracy ?? 100,
+        toggleRandomization: existingData.toggleRandomization ?? false,
+        enabled: existingData.enabled ?? true,
     });
 });
 
 chrome.runtime.onInstalled.addListener(
-    () => {
-        chrome.scripting.registerContentScripts([
+    async () => {
+        const scripts = [
             {
                 id: "gs-client",
                 matches: ["*://*/*"],
                 world: "MAIN",
                 js: ["client.js"],
+                allFrames: true,
             },
             {
                 id: "gs-handler",
                 matches: ["*://*/*"],
                 world: "ISOLATED",
                 js: ["handler.js"],
+                allFrames: true,
             },
-        ]);
+        ];
+
+        await chrome.scripting.unregisterContentScripts({
+            ids: scripts.map(({ id }) => id),
+        }).catch(() => { });
+
+        await chrome.scripting.registerContentScripts(scripts);
     }
 );

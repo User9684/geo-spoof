@@ -28,61 +28,203 @@ async function getFakePosition() {
     if (config.toggleRandomization) {
         const degreesPerMeterLatitude = 1 / 111320; // 1 degree = 111320 meters roughly
         const degreesPerMeterLongitude = 1 / (111320 * Math.cos(data.latitude * Math.PI / 180)); // Varies with latitude
-    
+
         const offsetLatitude = (Math.random() - 0.5) * degreesPerMeterLatitude * config.accuracy;
         const offsetLongitude = (Math.random() - 0.5) * degreesPerMeterLongitude * config.accuracy;
-    
+
         data.latitude += offsetLatitude;
         data.longitude += offsetLongitude;
     }
-    
+
 
     return data;
 }
 
 const activeWatchers = new Map();
 
-document.documentElement.addEventListener("gs-request-cpos", async () => {
-    const config = await chrome.storage.local.get([
-        "latitude",
-        "longitude",
-        "enabled",
-    ]);
+document.documentElement.addEventListener("gs-permission-request", async (e) => {
+    if (!e.detail) {
+        return;
+    }
 
-    const actualPosition = await getActualPosition();
-    const data = await getFakePosition();
+    const config = await chrome.storage.local.get(["enabled"]);
+    let state = "denied";
 
-    if (!config.enabled) {
-        data.latitude = actualPosition.coords.latitude;
-        data.longitude = actualPosition.coords.longitude;
-        data.accuracy = actualPosition.coords.accuracy;
+    if (config.enabled) {
+        state = "granted";
+    } else {
+        try {
+            const nativeStatus = await navigator.permissions.query({
+                name: "geolocation",
+            });
+            state = nativeStatus.state;
+        } catch (exception) {
+            state = "denied";
+        }
+    }
+
+    document.documentElement.dispatchEvent(
+        new CustomEvent("gs-permission-response", {
+            detail: {
+                permissionRequestId: e.detail.permissionRequestId,
+                state,
+            },
+        })
+    );
+});
+
+function executeNativeGeolocation(method, args) {
+    const geolocation = navigator.geolocation;
+
+    if (method === "getCurrentPosition") {
+        switch (args.length) {
+            case 0:
+                return geolocation.getCurrentPosition();
+            case 1:
+                return geolocation.getCurrentPosition(args[0]);
+            case 2:
+                return geolocation.getCurrentPosition(args[0], args[1]);
+            default:
+                return geolocation.getCurrentPosition(args[0], args[1], args[2]);
+        }
+    }
+
+    switch (args.length) {
+        case 0:
+            return geolocation.watchPosition();
+        case 1:
+            return geolocation.watchPosition(args[0]);
+        case 2:
+            return geolocation.watchPosition(args[0], args[1]);
+        default:
+            return geolocation.watchPosition(args[0], args[1], args[2]);
+    }
+}
+
+document.documentElement.addEventListener("gs-validation-request", (e) => {
+    if (!e.detail) {
+        return;
+    }
+
+    const { validationId, method, args } = e.detail;
+    const success = () => {};
+    const fail = () => {};
+    let error;
+
+    try {
+        const nativeArgs = args.map((argument) =>
+            argument && argument.__geospoofFunction ? success : argument
+        );
+        const options = nativeArgs[2];
+        const probeOptions =
+            options !== null &&
+            (typeof options === "object" || typeof options === "function")
+                ? new Proxy(options, {
+                      get(target, property, receiver) {
+                          if (property === "timeout") {
+                              return 0;
+                          }
+
+                          return Reflect.get(target, property, receiver);
+                      },
+                  })
+                : options;
+        const probeArgs = nativeArgs.slice();
+
+        if (probeArgs.length >= 1 && typeof probeArgs[0] === "function") {
+            probeArgs[0] = success;
+        }
+
+        if (probeArgs.length >= 2 && typeof probeArgs[1] === "function") {
+            probeArgs[1] = fail;
+        }
+
+        if (probeArgs.length >= 3) {
+            probeArgs[2] = probeOptions;
+        }
+
+        if (method === "getCurrentPosition") {
+            executeNativeGeolocation(method, probeArgs);
+        } else if (method === "watchPosition") {
+            const watcherId = executeNativeGeolocation(method, probeArgs);
+            navigator.geolocation.clearWatch(watcherId);
+        }
+    } catch (exception) {
+        error = {
+            name: exception.name,
+            message: exception.message,
+        };
+    }
+
+    document.documentElement.dispatchEvent(
+        new CustomEvent("gs-validation-response", {
+            detail: { validationId, error },
+        })
+    );
+});
+
+document.documentElement.addEventListener("gs-request-cpos", async (e) => {
+    let data;
+    let error;
+
+    try {
+        const config = await chrome.storage.local.get([
+            "latitude",
+            "longitude",
+            "enabled",
+        ]);
+
+        data = await getFakePosition();
+
+        if (!config.enabled) {
+            const actualPosition = await getActualPosition();
+            data.latitude = actualPosition.coords.latitude;
+            data.longitude = actualPosition.coords.longitude;
+            data.accuracy = actualPosition.coords.accuracy;
+        }
+    } catch (exception) {
+        error = {
+            code: exception.code || 2,
+            message: exception.message || "Position unavailable",
+        };
     }
 
     document.documentElement.dispatchEvent(
         new CustomEvent("gs-response-cpos", {
-            detail: data,
+            detail: {
+                requestId: e.detail.requestId,
+                detail: data,
+                error,
+            },
         })
     );
 });
 
 document.documentElement.addEventListener("gs-request-watchpos", async (e) => {
-    const config = await chrome.storage.local.get([
-        "latitude",
-        "longitude",
-        "enabled",
-    ]);
+    const { watcherId } = e.detail;
+    let data;
+    let error;
 
-    const actualPosition = await getActualPosition();
-    const data = {
-        latitude: actualPosition.coords.latitude,
-        longitude: actualPosition.coords.longitude,
-        accuracy: actualPosition.coords.accuracy,
-    };
+    try {
+        const config = await chrome.storage.local.get([
+            "latitude",
+            "longitude",
+            "enabled",
+        ]);
 
-    if (config.enabled) {
-        data.latitude = config.latitude;
-        data.longitude = config.longitude;
-        data.accuracy = 100;
+        data = await getFakePosition();
+
+        if (!config.enabled) {
+            const actualPosition = await getActualPosition();
+            data.latitude = actualPosition.coords.latitude;
+            data.longitude = actualPosition.coords.longitude;
+            data.accuracy = actualPosition.coords.accuracy;
+        }
+    } catch (exception) {
+        error = {
+            code: exception.code || 2,
+            message: exception.message || "Position unavailable",
+        };
     }
 
     document.documentElement.dispatchEvent(
@@ -90,6 +232,7 @@ document.documentElement.addEventListener("gs-request-watchpos", async (e) => {
             detail: {
                 watcherId,
                 detail: data,
+                error,
             },
         })
     );

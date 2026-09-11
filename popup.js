@@ -106,12 +106,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         statusDisplay.textContent = `
             Spoofer is ${data.enabled ? "enabled" : "disabled"}.
-            Current Location: ${data.latitude || "N/A"}, ${
-            data.longitude || "N/A"
-        }.
+            Current Location: ${data.latitude || "N/A"}, ${data.longitude || "N/A"
+            }.
             Accuracy: ${data.accuracy || 100} meters.
-            Randomization is ${
-                data.toggleRandomization ? "enabled" : "disabled"
+            Randomization is ${data.toggleRandomization ? "enabled" : "disabled"
             }.
         `.trim();
     }
