@@ -4,6 +4,8 @@
 // requests sent by client.js and returns either spoofed geolocation or 
 // accurate geolocation accordingly.
 
+const EVENT_HOLDER = document.documentElement;
+
 async function getActualPosition() {
     return new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject);
@@ -52,7 +54,7 @@ chrome.runtime.onMessage.addListener((message) => {
             return;
         }
 
-        document.documentElement.removeEventListener(
+        EVENT_HOLDER.removeEventListener(
             "gs-map-response",
             responseListener
         );
@@ -63,18 +65,18 @@ chrome.runtime.onMessage.addListener((message) => {
         });
     };
 
-    document.documentElement.addEventListener(
+    EVENT_HOLDER.addEventListener(
         "gs-map-response",
         responseListener
     );
-    document.documentElement.dispatchEvent(
+    EVENT_HOLDER.dispatchEvent(
         new CustomEvent("gs-map-request", {
             detail: { requestId: message.requestId },
         })
     );
 });
 
-document.documentElement.addEventListener("gs-permission-request", async (e) => {
+EVENT_HOLDER.addEventListener("gs-permission-request", async (e) => {
     if (!e.detail) {
         return;
     }
@@ -95,7 +97,7 @@ document.documentElement.addEventListener("gs-permission-request", async (e) => 
         }
     }
 
-    document.documentElement.dispatchEvent(
+    EVENT_HOLDER.dispatchEvent(
         new CustomEvent("gs-permission-response", {
             detail: {
                 permissionRequestId: e.detail.permissionRequestId,
@@ -133,7 +135,7 @@ function executeNativeGeolocation(method, args) {
     }
 }
 
-document.documentElement.addEventListener("gs-validation-request", (e) => {
+EVENT_HOLDER.addEventListener("gs-validation-request", (e) => {
     if (!e.detail) {
         return;
     }
@@ -188,14 +190,14 @@ document.documentElement.addEventListener("gs-validation-request", (e) => {
         };
     }
 
-    document.documentElement.dispatchEvent(
+    EVENT_HOLDER.dispatchEvent(
         new CustomEvent("gs-validation-response", {
             detail: { validationId, error },
         })
     );
 });
 
-document.documentElement.addEventListener("gs-request-cpos", async (e) => {
+EVENT_HOLDER.addEventListener("gs-request-cpos", async (e) => {
     let data;
     let error;
 
@@ -221,7 +223,7 @@ document.documentElement.addEventListener("gs-request-cpos", async (e) => {
         };
     }
 
-    document.documentElement.dispatchEvent(
+    EVENT_HOLDER.dispatchEvent(
         new CustomEvent("gs-response-cpos", {
             detail: {
                 requestId: e.detail.requestId,
@@ -232,7 +234,7 @@ document.documentElement.addEventListener("gs-request-cpos", async (e) => {
     );
 });
 
-document.documentElement.addEventListener("gs-request-watchpos", async (e) => {
+EVENT_HOLDER.addEventListener("gs-request-watchpos", async (e) => {
     const { watcherId } = e.detail;
     let data;
     let error;
@@ -259,7 +261,7 @@ document.documentElement.addEventListener("gs-request-watchpos", async (e) => {
         };
     }
 
-    document.documentElement.dispatchEvent(
+    EVENT_HOLDER.dispatchEvent(
         new CustomEvent("gs-response-watchpos", {
             detail: {
                 watcherId,

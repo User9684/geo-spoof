@@ -4,22 +4,27 @@
 // functionality, resulting in spoofed geolocation.
 
 (() => {
+    const EVENT_HOLDER = document.documentElement;
+
     const events = new Map();
     const watchers = new Map();
     let watcherIdCounter = 0;
     let requestIdCounter = 0;
     let validationIdCounter = 0;
     let permissionRequestIdCounter = 0;
-    const nativeFunctionToString = Function.prototype.toString;
+    const originalFunctionToString = Function.prototype.toString;
+    const nativeFunctionSources = new WeakMap();
 
-    function recursiveNativeToString() {
-        return "function toString() { [native code] }";
-    }
+    Function.prototype.toString = new Proxy(originalFunctionToString, {
+        apply(target, thisArg, args) {
+            const registeredSource = nativeFunctionSources.get(thisArg);
 
-    Object.defineProperty(recursiveNativeToString, "toString", {
-        value: recursiveNativeToString,
-        writable: false,
-        configurable: false,
+            if (registeredSource) {
+                return registeredSource;
+            }
+
+            return Reflect.apply(target, thisArg, args);
+        },
     });
 
     function createNativeLikeObject(prototype, properties) {
@@ -80,12 +85,6 @@
         const target = Object.create(PermissionStatus.prototype);
 
         Object.defineProperties(target, {
-            state: {
-                value: state,
-                enumerable: false,
-                writable: false,
-                configurable: true,
-            },
             onchange: {
                 value: null,
                 enumerable: true,
@@ -94,7 +93,15 @@
             },
         });
 
-        return target;
+        return new Proxy(target, {
+            get(object, name, receiver) {
+                if (name === "state") {
+                    return state;
+                }
+
+                return Reflect.get(object, name, receiver);
+            },
+        });
     }
 
     function getSpoofedPermissionState() {
@@ -109,18 +116,18 @@
                     return;
                 }
 
-                document.documentElement.removeEventListener(
+                EVENT_HOLDER.removeEventListener(
                     "gs-permission-response",
                     listener
                 );
                 resolve(createPermissionStatus(event.detail.state));
             };
 
-            document.documentElement.addEventListener(
+            EVENT_HOLDER.addEventListener(
                 "gs-permission-response",
                 listener
             );
-            document.documentElement.dispatchEvent(
+            EVENT_HOLDER.dispatchEvent(
                 new CustomEvent("gs-permission-request", {
                     detail: { permissionRequestId },
                 })
@@ -168,12 +175,12 @@
             validationError = event.detail.error;
         };
 
-        document.documentElement.addEventListener(
+        EVENT_HOLDER.addEventListener(
             "gs-validation-response",
             listener,
             { once: true }
         );
-        document.documentElement.dispatchEvent(
+        EVENT_HOLDER.dispatchEvent(
             new CustomEvent("gs-validation-request", {
                 detail: { validationId, method, args: validationArgs },
             })
@@ -212,36 +219,16 @@
     }
 
     function generateSpoofedFunction(originalFunction, newFunction, numArgs = 0) {
-        function spoofedFunction(...args) {
-            return newFunction(...args);
-        }
-
-        function spoofedToString() {
-            return nativeFunctionToString.call(originalFunction);
-        }
-
-        Object.defineProperty(spoofedToString, "toString", {
-            value: recursiveNativeToString,
-            writable: false,
-            configurable: false,
+        const spoofedFunction = new Proxy(originalFunction, {
+            apply(target, thisArg, args) {
+                return newFunction.apply(thisArg, args);
+            },
         });
 
-        Object.defineProperty(spoofedFunction, "toString", {
-            value: spoofedToString,
-            writable: true,
-            configurable: true,
-        });
-
-        for (const property of ["name", "length"]) {
-            const descriptor = Object.getOwnPropertyDescriptor(
-                originalFunction,
-                property
-            );
-
-            if (descriptor) {
-                Object.defineProperty(spoofedFunction, property, descriptor);
-            }
-        }
+        nativeFunctionSources.set(
+            spoofedFunction,
+            originalFunctionToString.call(originalFunction)
+        );
 
         return spoofedFunction;
     }
@@ -252,7 +239,31 @@
     const originalClearWatch = window.navigator.geolocation.clearWatch;
     const originalPermissionsQuery = window.navigator.permissions.query;
 
-    window.navigator.geolocation.getCurrentPosition = generateSpoofedFunction(
+    const geolocationPrototype = Object.getPrototypeOf(
+        window.navigator.geolocation
+    );
+    const permissionsPrototype = Object.getPrototypeOf(
+        window.navigator.permissions
+    );
+
+    function installGeolocationMethod(name, method) {
+        const descriptor = Object.getOwnPropertyDescriptor(
+            geolocationPrototype,
+            name
+        );
+
+        if (!descriptor?.configurable) {
+            return false;
+        }
+
+        Object.defineProperty(geolocationPrototype, name, {
+            ...descriptor,
+            value: method,
+        });
+        return true;
+    }
+
+    const spoofedGetCurrentPosition = generateSpoofedFunction(
         originalGetCurrentPosition,
         function (...args) {
             validateNativeArguments(
@@ -279,11 +290,11 @@
 
             events.set(requestId, callbacks);
 
-            document.documentElement.dispatchEvent(newEvent);
+            EVENT_HOLDER.dispatchEvent(newEvent);
         }
     );
 
-    window.navigator.geolocation.watchPosition = generateSpoofedFunction(
+    const spoofedWatchPosition = generateSpoofedFunction(
         originalWatchPosition,
         function (...args) {
             validateNativeArguments("watchPosition", originalWatchPosition, args);
@@ -297,13 +308,13 @@
             });
             watchers.set(watcherId, { success, fail });
 
-            document.documentElement.dispatchEvent(newEvent);
+            EVENT_HOLDER.dispatchEvent(newEvent);
 
             return watcherId;
         }
     );
 
-    window.navigator.geolocation.clearWatch = generateSpoofedFunction(
+    const spoofedClearWatch = generateSpoofedFunction(
         originalClearWatch,
         function (watcherId) {
             if (watchers.has(watcherId)) {
@@ -312,7 +323,17 @@
         }
     );
 
-    window.navigator.permissions.query = generateSpoofedFunction(
+    installGeolocationMethod(
+        "getCurrentPosition",
+        spoofedGetCurrentPosition
+    ) || (window.navigator.geolocation.getCurrentPosition =
+        spoofedGetCurrentPosition);
+    installGeolocationMethod("watchPosition", spoofedWatchPosition) ||
+        (window.navigator.geolocation.watchPosition = spoofedWatchPosition);
+    installGeolocationMethod("clearWatch", spoofedClearWatch) ||
+        (window.navigator.geolocation.clearWatch = spoofedClearWatch);
+
+    const spoofedPermissionsQuery = generateSpoofedFunction(
         originalPermissionsQuery,
         function (...args) {
             executeWithNativeArity(
@@ -333,7 +354,19 @@
         }
     );
 
-    document.documentElement.addEventListener("gs-response-cpos", async (e) => {
+    const permissionsQueryDescriptor = Object.getOwnPropertyDescriptor(
+        permissionsPrototype,
+        "query"
+    );
+
+    if (permissionsQueryDescriptor?.configurable) {
+        Object.defineProperty(permissionsPrototype, "query", {
+            ...permissionsQueryDescriptor,
+            value: spoofedPermissionsQuery,
+        });
+    }
+
+    EVENT_HOLDER.addEventListener("gs-response-cpos", async (e) => {
         const { requestId, detail, error } = e.detail;
         const callbacks = events.get(requestId);
 
@@ -352,7 +385,7 @@
         }
     });
 
-    document.documentElement.addEventListener(
+    EVENT_HOLDER.addEventListener(
         "gs-response-watchpos",
         async (e) => {
             const { watcherId, detail, error } = e.detail;
@@ -370,7 +403,7 @@
     );
 
     if (document.location?.pathname?.startsWith("/maps")) {
-        document.documentElement.addEventListener(
+        EVENT_HOLDER.addEventListener(
             "gs-map-request",
             async (e) => {
                 const path = document.location.pathname;
@@ -380,13 +413,13 @@
                 const lng = parseFloat(split?.[1]);
 
                 if (Number.isFinite(lat) && Number.isFinite(lng)) {
-                    document.documentElement.dispatchEvent(
+                    EVENT_HOLDER.dispatchEvent(
                         new CustomEvent("gs-map-response", {
                             detail: { requestId: e.detail?.requestId, lat, lng },
                         })
                     );
                 } else {
-                    document.documentElement.dispatchEvent(
+                    EVENT_HOLDER.dispatchEvent(
                         new CustomEvent("gs-map-response", {
                             detail: {
                                 requestId: e.detail?.requestId,
