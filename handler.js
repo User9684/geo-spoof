@@ -42,6 +42,38 @@ async function getFakePosition() {
 
 const activeWatchers = new Map();
 
+chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type !== "gs-map-tab-request") {
+        return;
+    }
+
+    const responseListener = (event) => {
+        if (event.detail?.requestId !== message.requestId) {
+            return;
+        }
+
+        document.documentElement.removeEventListener(
+            "gs-map-response",
+            responseListener
+        );
+        chrome.runtime.sendMessage({
+            type: "gs-map-response",
+            requestId: message.requestId,
+            ...event.detail,
+        });
+    };
+
+    document.documentElement.addEventListener(
+        "gs-map-response",
+        responseListener
+    );
+    document.documentElement.dispatchEvent(
+        new CustomEvent("gs-map-request", {
+            detail: { requestId: message.requestId },
+        })
+    );
+});
+
 document.documentElement.addEventListener("gs-permission-request", async (e) => {
     if (!e.detail) {
         return;

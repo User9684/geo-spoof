@@ -46,3 +46,27 @@ chrome.runtime.onInstalled.addListener(
         await chrome.scripting.registerContentScripts(scripts);
     }
 );
+
+chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type !== "gs-map-request") {
+        return;
+    }
+
+    chrome.tabs.query(
+        { url: ["*://*.google.com/maps*", "*://maps.google.com/*"] },
+        (tabs) => {
+            for (const tab of tabs) {
+                if (tab.id === undefined) {
+                    continue;
+                }
+
+                chrome.tabs
+                    .sendMessage(tab.id, {
+                        ...message,
+                        type: "gs-map-tab-request",
+                    })
+                    .catch(() => {});
+            }
+        }
+    );
+});

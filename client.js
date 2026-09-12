@@ -368,4 +368,34 @@
             }
         }
     );
+
+    if (document.location?.pathname?.startsWith("/maps")) {
+        document.documentElement.addEventListener(
+            "gs-map-request",
+            async (e) => {
+                const path = document.location.pathname;
+                const split = path.split("@")[1]?.split(",");
+
+                const lat = parseFloat(split?.[0]);
+                const lng = parseFloat(split?.[1]);
+
+                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                    document.documentElement.dispatchEvent(
+                        new CustomEvent("gs-map-response", {
+                            detail: { requestId: e.detail?.requestId, lat, lng },
+                        })
+                    );
+                } else {
+                    document.documentElement.dispatchEvent(
+                        new CustomEvent("gs-map-response", {
+                            detail: {
+                                requestId: e.detail?.requestId,
+                                error: "Invalid coordinates",
+                            },
+                        })
+                    );
+                }
+            }
+        )
+    }
 })();

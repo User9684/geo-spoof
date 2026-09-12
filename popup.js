@@ -18,6 +18,45 @@ document.addEventListener("DOMContentLoaded", () => {
     const randomizationToggle = document.getElementById("toggleRandomization");
     const statusDisplay = document.getElementById("status");
 
+    document.getElementById("useMapsPosition").addEventListener("click", () => {
+        const requestId = `${Date.now()}-${Math.random()}`;
+        let responseReceived = false;
+
+        const responseListener = (message) => {
+            if (
+                message?.type !== "gs-map-response" ||
+                message.requestId !== requestId
+            ) {
+                return;
+            }
+
+            responseReceived = true;
+            chrome.runtime.onMessage.removeListener(responseListener);
+
+            if (
+                Number.isFinite(message.lat) &&
+                Number.isFinite(message.lng)
+            ) {
+                if (window.confirm(`Use coords ${message.lat}, ${message.lng}?`)) {
+                    latitudeInput.value = message.lat;
+                    longitudeInput.value = message.lng;
+                }
+            } else {
+                alert("Invalid coordinates");
+            }
+        };
+
+        chrome.runtime.onMessage.addListener(responseListener);
+        chrome.runtime.sendMessage({ type: "gs-map-request", requestId });
+
+        setTimeout(() => {
+            chrome.runtime.onMessage.removeListener(responseListener);
+            if (!responseReceived) {
+                alert("Could not get coords, do you have google maps open?");
+            }
+        }, 1000);
+    });
+
     chrome.storage.local.get(
         ["latitude", "longitude", "accuracy", "toggleRandomization", "enabled"],
         (data) => {
