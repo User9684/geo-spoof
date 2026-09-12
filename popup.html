@@ -52,6 +52,19 @@
             <button class="button button-primary" id="confirmData">Save position</button>
         </section>
 
+        <section class="panel saved-panel">
+            <div class="panel-heading saved-heading">
+                <div>
+                    <h2>Saved locations</h2>
+                    <p>Drag to reorder</p>
+                </div>
+                <button class="text-button" id="saveLocation" type="button">+ Save current</button>
+            </div>
+            <div class="saved-list" id="savedLocations">
+                <p class="empty-state">No saved locations yet.</p>
+            </div>
+        </section>
+
         <details class="advanced">
             <summary>Advanced raw data</summary>
             <label for="raw">Configuration JSON</label>

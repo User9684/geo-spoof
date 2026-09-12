@@ -71,11 +71,42 @@ h1 {
     padding: 14px;
 }
 
+.saved-panel {
+    padding: 14px;
+}
+
 .panel-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 15px;
+}
+
+.saved-heading {
+    align-items: flex-start;
+    margin-bottom: 11px;
+}
+
+.saved-heading p {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.text-button {
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: var(--teal-dark);
+    cursor: pointer;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.text-button:hover {
+    color: var(--teal);
+    text-decoration: underline;
 }
 
 h2 {
@@ -187,6 +218,98 @@ input:focus {
 .actions {
     display: grid;
     gap: 8px;
+}
+
+.saved-list {
+    display: grid;
+    gap: 6px;
+}
+
+.saved-location {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 48px;
+    padding: 8px 8px 8px 11px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: #fbfcfc;
+    cursor: grab;
+}
+
+.saved-location:active {
+    cursor: grabbing;
+}
+
+.saved-location.is-dragging {
+    opacity: 0.45;
+}
+
+.saved-details {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.saved-details strong,
+.saved-details span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.saved-details strong {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.saved-details span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.saved-controls {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 3px;
+}
+
+.icon-button {
+    min-width: 28px;
+    height: 27px;
+    padding: 3px 6px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--teal-dark);
+    cursor: pointer;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.icon-button:hover {
+    background: #eaf2f2;
+}
+
+.remove-location {
+    color: var(--muted);
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1;
+}
+
+.remove-location:hover {
+    color: #a34f4f;
+}
+
+.empty-state {
+    margin: 0;
+    padding: 8px 2px 2px;
+    color: var(--muted);
+    font-size: 11px;
 }
 
 .button {
