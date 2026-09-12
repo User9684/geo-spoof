@@ -10,31 +10,59 @@
 </head>
 
 <body>
-    <h1>Geolocation Spoofer</h1>
-    <div class="container">
-        <div class="toggle">
-            <label for="enabled">Spoofer Enabled:</label>
-            <input type="checkbox" id="enabled" />
-        </div>
-        <label for="latitude">Latitude:</label>
-        <input type="text" id="latitude" placeholder="e.g., 37.7749" />
-        <label for="longitude">Longitude:</label>
-        <input type="text" id="longitude" placeholder="e.g., -122.4194" />
-        <label for="accuracy">Accuracy (meters):</label>
-        <input type="number" id="accuracy" placeholder="e.g., 100" />
-        <div class="toggle">
-            <label for="toggleRandomization">Randomization (uses accuracy value):</label>
-            <input type="checkbox" id="toggleRandomization" />
-        </div>
-        <button id="useMapsPosition">Use position from Maps</button>
-        <button id="confirmData">Confirm Data</button>
-        <label for="raw">Raw Data</label>
-        <input type="text" id="raw" placeholder="{}" />
-        <button id="confirmRawData">Confirm Raw Update</button>
+    <header class="header">
+        <div class="eyebrow">LOCATION CONTROL</div>
+        <h1>Geolocation Spoofer</h1>
+        <p>Set the coordinates your browser reports.</p>
+    </header>
+    <main class="container">
+        <section class="panel location-panel">
+            <div class="panel-heading">
+                <h2>Position</h2>
+                <label class="switch" aria-label="Spoofer enabled">
+                    <input type="checkbox" id="enabled" />
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="field-grid">
+                <div class="field">
+                    <label for="latitude">Latitude</label>
+                    <input type="text" id="latitude" placeholder="37.7749" />
+                </div>
+                <div class="field">
+                    <label for="longitude">Longitude</label>
+                    <input type="text" id="longitude" placeholder="-122.4194" />
+                </div>
+            </div>
+            <div class="field">
+                <label for="accuracy">Accuracy <span>(meters)</span></label>
+                <input type="number" id="accuracy" placeholder="100" />
+            </div>
+            <label class="check-row" for="toggleRandomization">
+                <input type="checkbox" id="toggleRandomization" />
+                <span>Randomize within accuracy</span>
+            </label>
+        </section>
+
+        <section class="actions">
+            <button class="button button-maps" id="useMapsPosition">
+                <span class="button-icon" aria-hidden="true">⌖</span>
+                Use position from Maps
+            </button>
+            <button class="button button-primary" id="confirmData">Save position</button>
+        </section>
+
+        <details class="advanced">
+            <summary>Advanced raw data</summary>
+            <label for="raw">Configuration JSON</label>
+            <input type="text" id="raw" placeholder="{}" />
+            <button class="button button-secondary" id="confirmRawData">Apply raw update</button>
+        </details>
+
         <div class="status" id="status">
             Loading current configuration...
         </div>
-    </div>
+    </main>
 </body>
 
 </html>
