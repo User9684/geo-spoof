@@ -1,0 +1,21 @@
+{
+  "name": "geo-spoof",
+  "description": "This is a geological location spoofer extension for Chromium browsers",
+  "main": "background.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/User9684/geo-spoof.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/User9684/geo-spoof/issues"
+  },
+  "homepage": "https://github.com/User9684/geo-spoof#readme",
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^10.10.0"
+  }
+}
