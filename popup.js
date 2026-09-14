@@ -3,6 +3,8 @@
 // This javascript file handles the input from the extension popup, along with
 // rendering pre-existing data.
 
+import { runTests } from "./tests.js";
+
 const BadCoordsError = Error("Invalid coordinates value");
 const EnabledNaBError = Error('"enabled" is not a bool');
 
@@ -15,6 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
 	const randomizationToggle = document.getElementById("toggleRandomization");
 	const statusDisplay = document.getElementById("status");
 	const savedLocationsDisplay = document.getElementById("savedLocations");
+	const runTestsButton = document.getElementById("runTests");
+	const testResultsDisplay = document.getElementById("testResults");
 	let draggedLocationIndex = null;
 
 	function getLocationFromForm() {
@@ -113,6 +117,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	function locationSummary(location) {
 		return `${location.latitude}, ${location.longitude}`;
+	}
+
+	function renderTestResults(results) {
+		testResultsDisplay.replaceChildren();
+
+		const tests = [
+			...results.failed.map(test => ({ ...test, status: "Failed", response: test.message })),
+			...results.errored.map(test => ({ ...test, status: "Error", response: test.message })),
+			...results.passed.map(test => ({ ...test, status: "Passed", response: "No issues detected." })),
+		];
+
+		for (const test of tests) {
+			const result = document.createElement("div");
+			result.className = `test-result test-${test.status.toLowerCase()}`;
+
+			const heading = document.createElement("div");
+			heading.className = "test-result-heading";
+
+			const name = document.createElement("strong");
+			name.className = "test-name";
+			name.textContent = test.testName;
+
+			const status = document.createElement("span");
+			status.className = "test-status";
+			status.textContent = test.status;
+
+			const response = document.createElement("p");
+			response.className = "test-response";
+			response.textContent = test.response;
+
+			heading.append(name, status);
+			result.append(heading, response);
+			testResultsDisplay.append(result);
+		}
+
+		console.log(results.position);
 	}
 
 	function renderSavedLocations(savedLocations) {
@@ -249,6 +289,44 @@ document.addEventListener("DOMContentLoaded", () => {
 				alert("Could not get coords, do you have google maps open?");
 			}
 		}, 1000);
+	});
+
+	runTestsButton.addEventListener("click", async () => {
+		runTestsButton.disabled = true;
+		testResultsDisplay.replaceChildren();
+		const loading = document.createElement("div");
+		loading.className = "test-results-message";
+		loading.textContent = "Running tests...";
+		testResultsDisplay.append(loading);
+
+		try {
+			const [tab] = await chrome.tabs.query({
+				active: true,
+				currentWindow: true,
+			});
+
+			if (!tab?.id) {
+				throw new Error("Could not find the active tab.");
+			}
+
+			const [execution] = await chrome.scripting.executeScript({
+				target: { tabId: tab.id },
+				world: "MAIN",
+				func: runTests,
+			});
+			const results = execution.result;
+			renderTestResults(results);
+		}
+		catch (error) {
+			testResultsDisplay.replaceChildren();
+			const errorMessage = document.createElement("div");
+			errorMessage.className = "test-results-message test-error";
+			errorMessage.textContent = `Could not run tests: ${error.message}`;
+			testResultsDisplay.append(errorMessage);
+		}
+		finally {
+			runTestsButton.disabled = false;
+		}
 	});
 
 	chrome.storage.local.get(

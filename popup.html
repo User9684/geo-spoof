@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Geolocation Spoofer</title>
     <link rel="stylesheet" href="popup.css" />
-    <script src="popup.js" defer></script>
+    <script type="module" src="popup.js"></script>
 </head>
 
 <body>
@@ -45,12 +45,15 @@
         </section>
 
         <section class="actions">
-            <button class="button button-maps" id="useMapsPosition">
+            <button class="button button-secondary" id="useMapsPosition">
                 <span class="button-icon" aria-hidden="true">⌖</span>
                 Use position from Maps
             </button>
             <button class="button button-primary" id="confirmData">Save position</button>
+            <button class="button button-secondary" id="runTests" type="button">Run page tests</button>
         </section>
+
+        <div class="test-results" id="testResults" aria-live="polite"></div>
 
         <section class="panel saved-panel">
             <div class="panel-heading saved-heading">
