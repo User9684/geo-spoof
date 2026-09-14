@@ -227,7 +227,7 @@
     }
   }
 
-  function generateSpoofedFunction(originalFunction, newFunction, numArgs = 0) {
+  function generateSpoofedFunction(originalFunction, newFunction) {
     const spoofedFunction = new Proxy(originalFunction, {
       apply(target, thisArg, args) {
         return newFunction.apply(thisArg, args);
