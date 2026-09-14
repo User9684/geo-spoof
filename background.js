@@ -3,70 +3,70 @@
 // This javascript files handling script injection for pages, and will inject into pages
 
 chrome.runtime.onInstalled.addListener(async () => {
-  const existingData = await chrome.storage.local.get([
-    "latitude",
-    "longitude",
-    "accuracy",
-    "toggleRandomization",
-    "enabled",
-  ]);
+	const existingData = await chrome.storage.local.get([
+		"latitude",
+		"longitude",
+		"accuracy",
+		"toggleRandomization",
+		"enabled",
+	]);
 
-  chrome.storage.local.set({
-    latitude: existingData.latitude ?? 0,
-    longitude: existingData.longitude ?? 0,
-    accuracy: existingData.accuracy ?? 100,
-    toggleRandomization: existingData.toggleRandomization ?? false,
-    enabled: existingData.enabled ?? true,
-  });
+	chrome.storage.local.set({
+		latitude: existingData.latitude ?? 0,
+		longitude: existingData.longitude ?? 0,
+		accuracy: existingData.accuracy ?? 100,
+		toggleRandomization: existingData.toggleRandomization ?? false,
+		enabled: existingData.enabled ?? true,
+	});
 });
 
 chrome.runtime.onInstalled.addListener(
-  async () => {
-    const scripts = [
-      {
-        id: "gs-client",
-        matches: ["*://*/*"],
-        world: "MAIN",
-        js: ["client.js"],
-        allFrames: true,
-      },
-      {
-        id: "gs-handler",
-        matches: ["*://*/*"],
-        world: "ISOLATED",
-        js: ["handler.js"],
-        allFrames: true,
-      },
-    ];
+	async () => {
+		const scripts = [
+			{
+				id: "gs-client",
+				matches: ["*://*/*"],
+				world: "MAIN",
+				js: ["client.js"],
+				allFrames: true,
+			},
+			{
+				id: "gs-handler",
+				matches: ["*://*/*"],
+				world: "ISOLATED",
+				js: ["handler.js"],
+				allFrames: true,
+			},
+		];
 
-    await chrome.scripting.unregisterContentScripts({
-      ids: scripts.map(({ id }) => id),
-    }).catch(() => { });
+		await chrome.scripting.unregisterContentScripts({
+			ids: scripts.map(({ id }) => id),
+		}).catch(() => { });
 
-    await chrome.scripting.registerContentScripts(scripts);
-  },
+		await chrome.scripting.registerContentScripts(scripts);
+	},
 );
 
 chrome.runtime.onMessage.addListener((message) => {
-  if (message?.type !== "gs-map-request") {
-    return;
-  }
+	if (message?.type !== "gs-map-request") {
+		return;
+	}
 
-  chrome.tabs.query(
-    { url: ["*://*.google.com/maps*", "*://maps.google.com/*"] },
-    (tabs) => {
-      for (const tab of tabs) {
-        if (tab.id === undefined) {
-          continue;
-        }
+	chrome.tabs.query(
+		{ url: ["*://*.google.com/maps*", "*://maps.google.com/*"] },
+		(tabs) => {
+			for (const tab of tabs) {
+				if (tab.id === undefined) {
+					continue;
+				}
 
-        chrome.tabs
-          .sendMessage(tab.id, {
-            ...message,
-            type: "gs-map-tab-request",
-          })
-          .catch(() => {});
-      }
-    },
-  );
+				chrome.tabs
+					.sendMessage(tab.id, {
+						...message,
+						type: "gs-map-tab-request",
+					})
+					.catch(() => {});
+			}
+		},
+	);
 });
