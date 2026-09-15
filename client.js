@@ -289,10 +289,20 @@
 			});
 			const callbacks = { success, fail, timer: null };
 
-			if (Number.isFinite(options?.timeout) && options.timeout > 0) {
+			if (Number.isFinite(options?.timeout)) {
 				callbacks.timer = setTimeout(() => {
 					if (events.delete(requestId) && fail) {
-						fail({ code: 3, message: "Timeout expired" });
+						const timeoutExpiredResp = createNativeLikeObject(
+							GeolocationPositionError.prototype,
+							{
+								code: 3,
+								message: "Timeout expired",
+							},
+						);
+
+						queueMicrotask(
+							fail.bind(undefined, timeoutExpiredResp),
+						);
 					}
 				}, options.timeout);
 			}
@@ -387,10 +397,17 @@
 			}
 
 			if (error) {
-				callbacks.fail?.(error);
+				const callback = callbacks.fail;
+
+				if (callback) {
+					queueMicrotask(callback.bind(undefined, error));
+				}
 			}
 			else {
-				callbacks.success(await generateFakePosition(detail));
+				const position = await generateFakePosition(detail);
+				const callback = callbacks.success;
+
+				queueMicrotask(callback.bind(undefined, position));
 			}
 		}
 	});
@@ -404,10 +421,17 @@
 				const callbacks = watchers.get(watcherId);
 
 				if (error) {
-					callbacks.fail?.(error);
+					const callback = callbacks.fail;
+
+					if (callback) {
+						queueMicrotask(callback.bind(undefined, error));
+					}
 				}
 				else {
-					callbacks.success(await generateFakePosition(detail));
+					const position = await generateFakePosition(detail);
+					const callback = callbacks.success;
+
+					queueMicrotask(callback.bind(undefined, position));
 				}
 			}
 		},
