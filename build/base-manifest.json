@@ -1,6 +1,6 @@
 {
     "name": "Geolocation Spoofer",
-    "version": "1.7.1",
+    "version": "1.7.2",
     "description": "Spoof geolocation based on custom latitude and longitude.",
     "permissions": [
         "scripting",
