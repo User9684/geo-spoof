@@ -2,8 +2,10 @@
 
 // This javascript files handling script injection for pages, and will inject into pages
 
-chrome.runtime.onInstalled.addListener(async () => {
-	const existingData = await chrome.storage.local.get([
+const browserApi = typeof browser !== "undefined" ? browser : chrome;
+
+browserApi.runtime.onInstalled.addListener(async () => {
+	const existingData = await browserApi.storage.local.get([
 		"latitude",
 		"longitude",
 		"accuracy",
@@ -11,7 +13,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 		"enabled",
 	]);
 
-	chrome.storage.local.set({
+	browserApi.storage.local.set({
 		latitude: existingData.latitude ?? 0,
 		longitude: existingData.longitude ?? 0,
 		accuracy: existingData.accuracy ?? 100,
@@ -20,7 +22,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 	});
 });
 
-chrome.runtime.onInstalled.addListener(
+browserApi.runtime.onInstalled.addListener(
 	async () => {
 		const scripts = [
 			{
@@ -39,20 +41,20 @@ chrome.runtime.onInstalled.addListener(
 			},
 		];
 
-		await chrome.scripting.unregisterContentScripts({
+		await browserApi.scripting.unregisterContentScripts({
 			ids: scripts.map(({ id }) => id),
 		}).catch(() => { });
 
-		await chrome.scripting.registerContentScripts(scripts);
+		await browserApi.scripting.registerContentScripts(scripts);
 	},
 );
 
-chrome.runtime.onMessage.addListener((message) => {
+browserApi.runtime.onMessage.addListener((message) => {
 	if (message?.type !== "gs-map-request") {
 		return;
 	}
 
-	chrome.tabs.query(
+	browserApi.tabs.query(
 		{ url: ["*://*.google.com/maps*", "*://maps.google.com/*"] },
 		(tabs) => {
 			for (const tab of tabs) {
@@ -60,7 +62,7 @@ chrome.runtime.onMessage.addListener((message) => {
 					continue;
 				}
 
-				chrome.tabs
+				browserApi.tabs
 					.sendMessage(tab.id, {
 						...message,
 						type: "gs-map-tab-request",

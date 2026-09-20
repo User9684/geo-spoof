@@ -5,6 +5,8 @@
 
 import { runTests } from "./tests.js";
 
+const browserApi = typeof browser !== "undefined" ? browser : chrome;
+
 const BadCoordsError = Error("Invalid coordinates value");
 const EnabledNaBError = Error('"enabled" is not a bool');
 
@@ -66,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	}
 
 	async function getConfiguration() {
-		const data = await chrome.storage.local.get([
+		const data = await browserApi.storage.local.get([
 			"latitude",
 			"longitude",
 			"accuracy",
@@ -102,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	async function setActiveLocation(location) {
 		const activeLocation = normalizeLocation(location);
 
-		await chrome.storage.local.set({
+		await browserApi.storage.local.set({
 			...activeLocation,
 			activeLocation,
 		});
@@ -229,7 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	async function removeLocation(index) {
 		const configuration = await getConfiguration();
 		configuration.savedLocations.splice(index, 1);
-		await chrome.storage.local.set({ savedLocations: configuration.savedLocations });
+		await browserApi.storage.local.set({ savedLocations: configuration.savedLocations });
 		renderSavedLocations(configuration.savedLocations);
 	}
 
@@ -247,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			1,
 		);
 		configuration.savedLocations.splice(targetIndex, 0, movedLocation);
-		await chrome.storage.local.set({ savedLocations: configuration.savedLocations });
+		await browserApi.storage.local.set({ savedLocations: configuration.savedLocations });
 		renderSavedLocations(configuration.savedLocations);
 	}
 
@@ -264,7 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			}
 
 			responseReceived = true;
-			chrome.runtime.onMessage.removeListener(responseListener);
+			browserApi.runtime.onMessage.removeListener(responseListener);
 
 			if (
 				Number.isFinite(message.lat)
@@ -280,11 +282,11 @@ document.addEventListener("DOMContentLoaded", () => {
 			}
 		};
 
-		chrome.runtime.onMessage.addListener(responseListener);
-		chrome.runtime.sendMessage({ type: "gs-map-request", requestId });
+		browserApi.runtime.onMessage.addListener(responseListener);
+		browserApi.runtime.sendMessage({ type: "gs-map-request", requestId });
 
 		setTimeout(() => {
-			chrome.runtime.onMessage.removeListener(responseListener);
+			browserApi.runtime.onMessage.removeListener(responseListener);
 			if (!responseReceived) {
 				alert("Could not get coords, do you have google maps open?");
 			}
@@ -300,7 +302,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		testResultsDisplay.append(loading);
 
 		try {
-			const [tab] = await chrome.tabs.query({
+			const [tab] = await browserApi.tabs.query({
 				active: true,
 				currentWindow: true,
 			});
@@ -309,7 +311,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				throw new Error("Could not find the active tab.");
 			}
 
-			const [execution] = await chrome.scripting.executeScript({
+			const [execution] = await browserApi.scripting.executeScript({
 				target: { tabId: tab.id },
 				world: "MAIN",
 				func: runTests,
@@ -329,7 +331,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	});
 
-	chrome.storage.local.get(
+	browserApi.storage.local.get(
 		["latitude", "longitude", "accuracy", "toggleRandomization", "enabled"],
 		() => {
 			updateStatus();
@@ -353,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			name: name.trim(),
 			...location,
 		});
-		await chrome.storage.local.set({ savedLocations: configuration.savedLocations });
+		await browserApi.storage.local.set({ savedLocations: configuration.savedLocations });
 		renderSavedLocations(configuration.savedLocations);
 	});
 
@@ -379,7 +381,7 @@ document.addEventListener("DOMContentLoaded", () => {
 					.filter(location => normalizeLocation(location))
 				: [];
 
-			chrome.storage.local.set({
+			browserApi.storage.local.set({
 				...activeLocation,
 				activeLocation,
 				savedLocations,
@@ -402,7 +404,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			return;
 		}
 
-		chrome.storage.local.set(
+		browserApi.storage.local.set(
 			{
 				...location,
 				activeLocation: location,
@@ -421,7 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		const { activeLocation } = data;
 
 		if (data.needsMigration) {
-			await chrome.storage.local.set({
+			await browserApi.storage.local.set({
 				...activeLocation,
 				activeLocation,
 				savedLocations: data.savedLocations,

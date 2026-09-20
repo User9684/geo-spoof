@@ -6,6 +6,8 @@
 
 const EVENT_HOLDER = document.documentElement;
 
+const browserApi = typeof browser !== "undefined" ? browser : chrome;
+
 function parseEventDetail(event) {
 	if (typeof event.detail !== "string") {
 		return null;
@@ -30,7 +32,7 @@ async function getActualPosition() {
 }
 
 async function getFakePosition() {
-	const config = await chrome.storage.local.get([
+	const config = await browserApi.storage.local.get([
 		"latitude",
 		"longitude",
 		"accuracy",
@@ -58,7 +60,7 @@ async function getFakePosition() {
 	return data;
 }
 
-chrome.runtime.onMessage.addListener((message) => {
+browserApi.runtime.onMessage.addListener((message) => {
 	if (message?.type !== "gs-map-tab-request") {
 		return;
 	}
@@ -74,7 +76,7 @@ chrome.runtime.onMessage.addListener((message) => {
 			"gs-map-response",
 			responseListener,
 		);
-		chrome.runtime.sendMessage({
+		browserApi.runtime.sendMessage({
 			type: "gs-map-response",
 			requestId: message.requestId,
 			...detail,
@@ -97,7 +99,7 @@ EVENT_HOLDER.addEventListener("gs-permission-request", async (e) => {
 		return;
 	}
 
-	const config = await chrome.storage.local.get(["enabled"]);
+	const config = await browserApi.storage.local.get(["enabled"]);
 	let state = "denied";
 
 	if (config.enabled) {
@@ -226,7 +228,7 @@ EVENT_HOLDER.addEventListener("gs-request-cpos", async (e) => {
 	let error;
 
 	try {
-		const config = await chrome.storage.local.get([
+		const config = await browserApi.storage.local.get([
 			"latitude",
 			"longitude",
 			"enabled",
@@ -268,7 +270,7 @@ EVENT_HOLDER.addEventListener("gs-request-watchpos", async (e) => {
 	let error;
 
 	try {
-		const config = await chrome.storage.local.get([
+		const config = await browserApi.storage.local.get([
 			"latitude",
 			"longitude",
 			"enabled",
