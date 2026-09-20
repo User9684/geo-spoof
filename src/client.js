@@ -6,6 +6,23 @@
 (() => {
 	const EVENT_HOLDER = document.documentElement;
 
+	function parseEventDetail(event) {
+		if (typeof event.detail !== "string") {
+			return null;
+		}
+
+		try {
+			return JSON.parse(event.detail);
+		}
+		catch (_unused) {
+			return null;
+		}
+	}
+
+	function createEvent(name, detail) {
+		return new CustomEvent(name, { detail: JSON.stringify(detail) });
+	}
+
 	const events = new Map();
 	const watchers = new Map();
 	let watcherIdCounter = 0;
@@ -117,9 +134,11 @@
 
 		return new Promise((resolve) => {
 			const listener = (event) => {
+				const detail = parseEventDetail(event);
+
 				if (
-					!event.detail
-					|| event.detail.permissionRequestId !== permissionRequestId
+					!detail
+					|| detail.permissionRequestId !== permissionRequestId
 				) {
 					return;
 				}
@@ -128,7 +147,7 @@
 					"gs-permission-response",
 					listener,
 				);
-				resolve(createPermissionStatus(event.detail.state));
+				resolve(createPermissionStatus(detail.state));
 			};
 
 			EVENT_HOLDER.addEventListener(
@@ -136,9 +155,7 @@
 				listener,
 			);
 			EVENT_HOLDER.dispatchEvent(
-				new CustomEvent("gs-permission-request", {
-					detail: { permissionRequestId },
-				}),
+				createEvent("gs-permission-request", { permissionRequestId }),
 			);
 		});
 	}
@@ -176,11 +193,13 @@
 		);
 
 		const listener = (event) => {
-			if (!event.detail || event.detail.validationId !== validationId) {
+			const detail = parseEventDetail(event);
+
+			if (!detail || detail.validationId !== validationId) {
 				return;
 			}
 
-			validationError = event.detail.error;
+			validationError = detail.error;
 		};
 
 		EVENT_HOLDER.addEventListener(
@@ -189,8 +208,10 @@
 			{ once: true },
 		);
 		EVENT_HOLDER.dispatchEvent(
-			new CustomEvent("gs-validation-request", {
-				detail: { validationId, method, args: validationArgs },
+			createEvent("gs-validation-request", {
+				validationId,
+				method,
+				args: validationArgs,
 			}),
 		);
 
@@ -284,9 +305,7 @@
 			const [success, fail, options] = args;
 
 			const requestId = ++requestIdCounter;
-			const newEvent = new CustomEvent("gs-request-cpos", {
-				detail: { requestId, options },
-			});
+			const newEvent = createEvent("gs-request-cpos", { requestId, options });
 			const callbacks = { success, fail, timer: null };
 
 			if (Number.isFinite(options?.timeout)) {
@@ -322,9 +341,7 @@
 
 			const watcherId = ++watcherIdCounter;
 
-			const newEvent = new CustomEvent("gs-request-watchpos", {
-				detail: { watcherId, options },
-			});
+			const newEvent = createEvent("gs-request-watchpos", { watcherId, options });
 			watchers.set(watcherId, { success, fail });
 
 			EVENT_HOLDER.dispatchEvent(newEvent);
@@ -386,7 +403,13 @@
 	}
 
 	EVENT_HOLDER.addEventListener("gs-response-cpos", async (e) => {
-		const { requestId, detail, error } = e.detail;
+		const eventDetail = parseEventDetail(e);
+
+		if (!eventDetail) {
+			return;
+		}
+
+		const { requestId, detail, error } = eventDetail;
 		const callbacks = events.get(requestId);
 
 		if (callbacks) {
@@ -415,7 +438,13 @@
 	EVENT_HOLDER.addEventListener(
 		"gs-response-watchpos",
 		async (e) => {
-			const { watcherId, detail, error } = e.detail;
+			const eventDetail = parseEventDetail(e);
+
+			if (!eventDetail) {
+				return;
+			}
+
+			const { watcherId, detail, error } = eventDetail;
 
 			if (watchers.has(watcherId)) {
 				const callbacks = watchers.get(watcherId);
@@ -441,6 +470,12 @@
 		EVENT_HOLDER.addEventListener(
 			"gs-map-request",
 			async (e) => {
+				const eventDetail = parseEventDetail(e);
+
+				if (!eventDetail) {
+					return;
+				}
+
 				const path = document.location.pathname;
 				const split = path.split("@")[1]?.split(",");
 
@@ -449,18 +484,18 @@
 
 				if (Number.isFinite(lat) && Number.isFinite(lng)) {
 					EVENT_HOLDER.dispatchEvent(
-						new CustomEvent("gs-map-response", {
-							detail: { requestId: e.detail?.requestId, lat, lng },
+						createEvent("gs-map-response", {
+							requestId: eventDetail.requestId,
+							lat,
+							lng,
 						}),
 					);
 				}
 				else {
 					EVENT_HOLDER.dispatchEvent(
-						new CustomEvent("gs-map-response", {
-							detail: {
-								requestId: e.detail?.requestId,
-								error: "Invalid coordinates",
-							},
+						createEvent("gs-map-response", {
+							requestId: eventDetail.requestId,
+							error: "Invalid coordinates",
 						}),
 					);
 				}

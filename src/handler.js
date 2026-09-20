@@ -6,6 +6,23 @@
 
 const EVENT_HOLDER = document.documentElement;
 
+function parseEventDetail(event) {
+	if (typeof event.detail !== "string") {
+		return null;
+	}
+
+	try {
+		return JSON.parse(event.detail);
+	}
+	catch (_unused) {
+		return null;
+	}
+}
+
+function createEvent(name, detail) {
+	return new CustomEvent(name, { detail: JSON.stringify(detail) });
+}
+
 async function getActualPosition() {
 	return new Promise((resolve, reject) => {
 		navigator.geolocation.getCurrentPosition(resolve, reject);
@@ -47,7 +64,9 @@ chrome.runtime.onMessage.addListener((message) => {
 	}
 
 	const responseListener = (event) => {
-		if (event.detail?.requestId !== message.requestId) {
+		const detail = parseEventDetail(event);
+
+		if (detail?.requestId !== message.requestId) {
 			return;
 		}
 
@@ -58,7 +77,7 @@ chrome.runtime.onMessage.addListener((message) => {
 		chrome.runtime.sendMessage({
 			type: "gs-map-response",
 			requestId: message.requestId,
-			...event.detail,
+			...detail,
 		});
 	};
 
@@ -67,14 +86,14 @@ chrome.runtime.onMessage.addListener((message) => {
 		responseListener,
 	);
 	EVENT_HOLDER.dispatchEvent(
-		new CustomEvent("gs-map-request", {
-			detail: { requestId: message.requestId },
-		}),
+		createEvent("gs-map-request", { requestId: message.requestId }),
 	);
 });
 
 EVENT_HOLDER.addEventListener("gs-permission-request", async (e) => {
-	if (!e.detail) {
+	const detail = parseEventDetail(e);
+
+	if (!detail) {
 		return;
 	}
 
@@ -97,11 +116,9 @@ EVENT_HOLDER.addEventListener("gs-permission-request", async (e) => {
 	}
 
 	EVENT_HOLDER.dispatchEvent(
-		new CustomEvent("gs-permission-response", {
-			detail: {
-				permissionRequestId: e.detail.permissionRequestId,
-				state,
-			},
+		createEvent("gs-permission-response", {
+			permissionRequestId: detail.permissionRequestId,
+			state,
 		}),
 	);
 });
@@ -135,11 +152,13 @@ function executeNativeGeolocation(method, args) {
 }
 
 EVENT_HOLDER.addEventListener("gs-validation-request", (e) => {
-	if (!e.detail) {
+	const detail = parseEventDetail(e);
+
+	if (!detail) {
 		return;
 	}
 
-	const { validationId, method, args } = e.detail;
+	const { validationId, method, args } = detail;
 	const success = () => {};
 	const fail = () => {};
 	let error;
@@ -192,13 +211,17 @@ EVENT_HOLDER.addEventListener("gs-validation-request", (e) => {
 	}
 
 	EVENT_HOLDER.dispatchEvent(
-		new CustomEvent("gs-validation-response", {
-			detail: { validationId, error },
-		}),
+		createEvent("gs-validation-response", { validationId, error }),
 	);
 });
 
 EVENT_HOLDER.addEventListener("gs-request-cpos", async (e) => {
+	const detail = parseEventDetail(e);
+
+	if (!detail) {
+		return;
+	}
+
 	let data;
 	let error;
 
@@ -226,19 +249,22 @@ EVENT_HOLDER.addEventListener("gs-request-cpos", async (e) => {
 	}
 
 	EVENT_HOLDER.dispatchEvent(
-		new CustomEvent("gs-response-cpos", {
-			detail: {
-				requestId: e.detail.requestId,
-				detail: data,
-				error,
-			},
+		createEvent("gs-response-cpos", {
+			requestId: detail.requestId,
+			detail: data,
+			error,
 		}),
 	);
 });
 
 EVENT_HOLDER.addEventListener("gs-request-watchpos", async (e) => {
-	const { watcherId } = e.detail;
-	let data;
+	const detail = parseEventDetail(e);
+
+	if (!detail) {
+		return;
+	}
+
+	const { watcherId } = detail;
 	let error;
 
 	try {
@@ -265,12 +291,10 @@ EVENT_HOLDER.addEventListener("gs-request-watchpos", async (e) => {
 	}
 
 	EVENT_HOLDER.dispatchEvent(
-		new CustomEvent("gs-response-watchpos", {
-			detail: {
-				watcherId,
-				detail: data,
-				error,
-			},
+		createEvent("gs-response-watchpos", {
+			watcherId,
+			detail: data,
+			error,
 		}),
 	);
 });

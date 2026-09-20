@@ -4,6 +4,13 @@
 // It runs all of the listed tests and returns an object with the results of each one.
 
 export async function runTests() {
+	function getNativeCodeString(fnName) {
+		// This is done because on FireFox, native code has newlines!
+		let baseToStringOutput = toString.toString();
+
+		return baseToStringOutput.replace("toString", fnName);
+	}
+
 	// Has to be defined inside the runTests function itself
 	// so that it actually gets registered on executeScript
 	const TestsArr = [];
@@ -33,7 +40,7 @@ export async function runTests() {
 
 			const methods = [geolocationAPI.getCurrentPosition, geolocationAPI.watchPosition, geolocationAPI.clearWatch];
 			for (const method of methods) {
-				if (Object.getPrototypeOf(method).toString() !== "function () { [native code] }") {
+				if (Object.getPrototypeOf(method).toString() !== getNativeCodeString("")) {
 					return [false, `Geolocation API method ${method.name} prototype is invalid!`];
 				}
 			}
@@ -63,7 +70,7 @@ export async function runTests() {
 			lastItem = lastItem.toString;
 
 			for (let i = 0; i < recursiveToStringDepth; i++) {
-				if (lastItem.toString() !== "function toString() { [native code] }") {
+				if (lastItem.toString() !== getNativeCodeString("toString")) {
 					return [false, `Geolocation API toString() is invalid at depth ${i}!`];
 				}
 
@@ -75,13 +82,13 @@ export async function runTests() {
 		registerTest("getCurrentPosition Recursive toString", "geolocationAPI", (geolocationAPI) => {
 			let lastItem = geolocationAPI.getCurrentPosition;
 
-			if (lastItem.toString() !== "function getCurrentPosition() { [native code] }") {
+			if (lastItem.toString() !== getNativeCodeString("getCurrentPosition")) {
 				return [false, "getCurrentPosition API toString() is invalid!"];
 			}
 			lastItem = lastItem.toString;
 
 			for (let i = 0; i < recursiveToStringDepth; i++) {
-				if (lastItem.toString() !== "function toString() { [native code] }") {
+				if (lastItem.toString() !== getNativeCodeString("toString")) {
 					return [false, `getCurrentPosition toString() is invalid at depth ${i}!`];
 				}
 

@@ -1,0 +1,22 @@
+{
+    "name": "Geolocation Spoofer",
+    "version": "1.7",
+    "description": "Spoof geolocation based on custom latitude and longitude.",
+    "permissions": [
+        "scripting",
+        "webNavigation",
+        "storage",
+        "nativeMessaging",
+        "geolocation"
+    ],
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "geo-spoofer@user9684.dev",
+            "data_collection_permissions": {
+                "required": [
+                    "none"
+                ]
+            }
+        }
+    }
+}
