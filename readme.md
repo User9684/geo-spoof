@@ -6,9 +6,10 @@ This is a geological location spoofer extension for web browsers
 
 ### Installation
 
-- Chromium Browsers:
+- Chromium Browsers / Firefox Nightly:
 - 1) Navigate to [releases](./releases)
 - 2) Download the appropriate zip file (mv2 for Manifest V2, mv3 for Manifest V3)
+- 2) - For Firefix Nightly, you'll want to pick mv2
 - 3) Navigate to your browser's extension management page
 - 4) Enable "Developer Mode"
 - 5) Drag & Drop the zip file, and it should install.
