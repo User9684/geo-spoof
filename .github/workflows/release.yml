@@ -1,0 +1,47 @@
+name: Build and release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - build/base-manifest.json
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension archives
+        run: node build.mjs
+        working-directory: build
+
+      - name: Read release version
+        id: manifest
+        run: echo "version=$(node -p \"require('./build/base-manifest.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.manifest.outputs.version }}
+          name: v${{ steps.manifest.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: |
+            build/output/mv2.zip
+            build/output/mv3.zip
