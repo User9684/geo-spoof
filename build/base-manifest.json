@@ -9,6 +9,9 @@
         "nativeMessaging",
         "geolocation"
     ],
+    "icons": {
+        "48": "icon.png"
+    },
     "browser_specific_settings": {
         "gecko": {
             "id": "geo-spoofer@user9684.dev",
