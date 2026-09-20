@@ -2,7 +2,18 @@
 
 ### What is this?
 
-This is a geological location spoofer extension for Chromium browsers
+This is a geological location spoofer extension for web browsers
+
+### Installation
+
+- Chromium Browsers:
+- 1) Navigate to [releases](./releases)
+- 2) Download the appropriate zip file (mv2 for Manifest V2, mv3 for Manifest V3)
+- 3) Navigate to your browser's extension management page
+- 4) Enable "Developer Mode"
+- 5) Drag & Drop the zip file, and it should install.
+- Firefox:
+- - [Install via AMO](https://addons.mozilla.org/en-US/firefox/addon/geolocation-spoofer)
 
 ### What makes this different from others?
 
