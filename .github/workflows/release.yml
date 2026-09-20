@@ -33,7 +33,9 @@ jobs:
 
       - name: Read release version
         id: manifest
-        run: echo "version=$(node -p \"require('./build/base-manifest.json').version\")" >> "$GITHUB_OUTPUT"
+        run: |
+          version="$(node -p "require('./build/base-manifest.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Create or update GitHub release
         uses: softprops/action-gh-release@v2
