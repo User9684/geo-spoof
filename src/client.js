@@ -6,7 +6,15 @@
 (() => {
 	const EVENT_HOLDER = document.documentElement;
 
-	function parseEventDetail(event) {
+	const events = new Map();
+	const watchers = new Map();
+	const nativeFunctionSources = new WeakMap();
+	let watcherIdCounter = 0;
+	let requestIdCounter = 0;
+	let validationIdCounter = 0;
+	let permissionRequestIdCounter = 0;
+
+	function ParseEventDetail(event) {
 		if (typeof event.detail !== "string") {
 			return null;
 		}
@@ -19,18 +27,11 @@
 		}
 	}
 
-	function createEvent(name, detail) {
+	function CreateEvent(name, detail) {
 		return new CustomEvent(name, { detail: JSON.stringify(detail) });
 	}
 
-	const events = new Map();
-	const watchers = new Map();
-	let watcherIdCounter = 0;
-	let requestIdCounter = 0;
-	let validationIdCounter = 0;
-	let permissionRequestIdCounter = 0;
 	const originalFunctionToString = Function.prototype.toString;
-	const nativeFunctionSources = new WeakMap();
 	const nativeFunctionToStringSource = originalFunctionToString.call(
 		originalFunctionToString,
 	);
@@ -52,7 +53,7 @@
 	);
 	Function.prototype.toString = nativeFunctionToString;
 
-	function createNativeLikeObject(prototype, properties) {
+	function CreateNativeLikeObject(prototype, properties) {
 		const target = Object.create(prototype);
 		const propertyNames = Object.keys(properties);
 
@@ -86,7 +87,7 @@
 	}
 
 	async function generateFakeCoords(config) {
-		return createNativeLikeObject(GeolocationCoordinates.prototype, {
+		return CreateNativeLikeObject(GeolocationCoordinates.prototype, {
 			latitude: config.latitude,
 			longitude: config.longitude,
 			accuracy: config.accuracy,
@@ -100,7 +101,7 @@
 	async function generateFakePosition(config) {
 		const coords = await generateFakeCoords(config);
 
-		return createNativeLikeObject(GeolocationPosition.prototype, {
+		return CreateNativeLikeObject(GeolocationPosition.prototype, {
 			coords,
 			timestamp: Date.now(),
 		});
@@ -134,7 +135,7 @@
 
 		return new Promise((resolve) => {
 			const listener = (event) => {
-				const detail = parseEventDetail(event);
+				const detail = ParseEventDetail(event);
 
 				if (
 					!detail
@@ -155,7 +156,7 @@
 				listener,
 			);
 			EVENT_HOLDER.dispatchEvent(
-				createEvent("gs-permission-request", { permissionRequestId }),
+				CreateEvent("gs-permission-request", { permissionRequestId }),
 			);
 		});
 	}
@@ -193,7 +194,7 @@
 		);
 
 		const listener = (event) => {
-			const detail = parseEventDetail(event);
+			const detail = ParseEventDetail(event);
 
 			if (!detail || detail.validationId !== validationId) {
 				return;
@@ -208,7 +209,7 @@
 			{ once: true },
 		);
 		EVENT_HOLDER.dispatchEvent(
-			createEvent("gs-validation-request", {
+			CreateEvent("gs-validation-request", {
 				validationId,
 				method,
 				args: validationArgs,
@@ -305,13 +306,13 @@
 			const [success, fail, options] = args;
 
 			const requestId = ++requestIdCounter;
-			const newEvent = createEvent("gs-request-cpos", { requestId, options });
+			const newEvent = CreateEvent("gs-request-cpos", { requestId, options });
 			const callbacks = { success, fail, timer: null };
 
 			if (Number.isFinite(options?.timeout)) {
 				callbacks.timer = setTimeout(() => {
 					if (events.delete(requestId) && fail) {
-						const timeoutExpiredResp = createNativeLikeObject(
+						const timeoutExpiredResp = CreateNativeLikeObject(
 							GeolocationPositionError.prototype,
 							{
 								code: 3,
@@ -341,7 +342,7 @@
 
 			const watcherId = ++watcherIdCounter;
 
-			const newEvent = createEvent("gs-request-watchpos", { watcherId, options });
+			const newEvent = CreateEvent("gs-request-watchpos", { watcherId, options });
 			watchers.set(watcherId, { success, fail });
 
 			EVENT_HOLDER.dispatchEvent(newEvent);
@@ -403,7 +404,7 @@
 	}
 
 	EVENT_HOLDER.addEventListener("gs-response-cpos", async (e) => {
-		const eventDetail = parseEventDetail(e);
+		const eventDetail = ParseEventDetail(e);
 
 		if (!eventDetail) {
 			return;
@@ -438,7 +439,7 @@
 	EVENT_HOLDER.addEventListener(
 		"gs-response-watchpos",
 		async (e) => {
-			const eventDetail = parseEventDetail(e);
+			const eventDetail = ParseEventDetail(e);
 
 			if (!eventDetail) {
 				return;
@@ -470,7 +471,7 @@
 		EVENT_HOLDER.addEventListener(
 			"gs-map-request",
 			async (e) => {
-				const eventDetail = parseEventDetail(e);
+				const eventDetail = ParseEventDetail(e);
 
 				if (!eventDetail) {
 					return;
@@ -484,7 +485,7 @@
 
 				if (Number.isFinite(lat) && Number.isFinite(lng)) {
 					EVENT_HOLDER.dispatchEvent(
-						createEvent("gs-map-response", {
+						CreateEvent("gs-map-response", {
 							requestId: eventDetail.requestId,
 							lat,
 							lng,
@@ -493,7 +494,7 @@
 				}
 				else {
 					EVENT_HOLDER.dispatchEvent(
-						createEvent("gs-map-response", {
+						CreateEvent("gs-map-response", {
 							requestId: eventDetail.requestId,
 							error: "Invalid coordinates",
 						}),

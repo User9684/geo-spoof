@@ -5,10 +5,80 @@
 
 import { runTests } from "./tests.js";
 
-const browserApi = typeof browser !== "undefined" ? browser : chrome;
-
 const BadCoordsError = Error("Invalid coordinates value");
 const EnabledNaBError = Error('"enabled" is not a bool');
+
+const BrowserAPI = typeof browser !== "undefined" ? browser : chrome;
+
+async function getConfiguration() {
+	const data = await BrowserAPI.storage.local.get([
+		"latitude",
+		"longitude",
+		"accuracy",
+		"toggleRandomization",
+		"enabled",
+		"activeLocation",
+		"savedLocations",
+	]);
+	const storedActiveLocation = NormalizeLocation(data.activeLocation);
+	const activeLocation = storedActiveLocation || NormalizeLocation(data) || {
+		latitude: 0,
+		longitude: 0,
+		accuracy: 100,
+		toggleRandomization: false,
+	};
+
+	return {
+		...data,
+		activeLocation,
+		needsMigration: !storedActiveLocation || !Array.isArray(data.savedLocations),
+		savedLocations: Array.isArray(data.savedLocations)
+			? data.savedLocations
+				.map(location => ({
+					name: String(location?.name || "Unnamed location").trim(),
+					...NormalizeLocation(location),
+				}))
+				.filter(location => NormalizeLocation(location))
+			: [],
+	};
+}
+
+async function setActiveLocation(location) {
+	const activeLocation = NormalizeLocation(location);
+
+	await BrowserAPI.storage.local.set({
+		...activeLocation,
+		activeLocation,
+	});
+}
+
+function getFormattedLocation(location) {
+	return `${location.latitude}, ${location.longitude}`;
+}
+
+function NormalizeLocation(location) {
+	if (!location || typeof location !== "object") {
+		return null;
+	}
+
+	const normalized = {
+		latitude: Number(location.latitude),
+		longitude: Number(location.longitude),
+		accuracy: Number(location.accuracy),
+		toggleRandomization: Boolean(location.toggleRandomization),
+	};
+
+	if (
+		!Number.isFinite(normalized.latitude)
+		|| !Number.isFinite(normalized.longitude)
+		|| !Number.isFinite(normalized.accuracy)
+		|| normalized.accuracy <= 0
+	) {
+		return null;
+	}
+
+	return normalized;
+}
 
 document.addEventListener("DOMContentLoaded", () => {
 	const latitudeInput = document.getElementById("latitude");
@@ -43,82 +113,11 @@ document.addEventListener("DOMContentLoaded", () => {
 		return location;
 	}
 
-	function normalizeLocation(location) {
-		if (!location || typeof location !== "object") {
-			return null;
-		}
-
-		const normalized = {
-			latitude: Number(location.latitude),
-			longitude: Number(location.longitude),
-			accuracy: Number(location.accuracy),
-			toggleRandomization: Boolean(location.toggleRandomization),
-		};
-
-		if (
-			!Number.isFinite(normalized.latitude)
-			|| !Number.isFinite(normalized.longitude)
-			|| !Number.isFinite(normalized.accuracy)
-			|| normalized.accuracy <= 0
-		) {
-			return null;
-		}
-
-		return normalized;
-	}
-
-	async function getConfiguration() {
-		const data = await browserApi.storage.local.get([
-			"latitude",
-			"longitude",
-			"accuracy",
-			"toggleRandomization",
-			"enabled",
-			"activeLocation",
-			"savedLocations",
-		]);
-		const storedActiveLocation = normalizeLocation(data.activeLocation);
-		const activeLocation = storedActiveLocation
-		    || normalizeLocation(data) || {
-			latitude: 0,
-			longitude: 0,
-			accuracy: 100,
-			toggleRandomization: false,
-		};
-
-		return {
-			...data,
-			activeLocation,
-			needsMigration: !storedActiveLocation || !Array.isArray(data.savedLocations),
-			savedLocations: Array.isArray(data.savedLocations)
-				? data.savedLocations
-					.map(location => ({
-						name: String(location?.name || "Unnamed location").trim(),
-						...normalizeLocation(location),
-					}))
-					.filter(location => normalizeLocation(location))
-				: [],
-		};
-	}
-
-	async function setActiveLocation(location) {
-		const activeLocation = normalizeLocation(location);
-
-		await browserApi.storage.local.set({
-			...activeLocation,
-			activeLocation,
-		});
-	}
-
 	function updateForm(location) {
 		latitudeInput.value = location.latitude;
 		longitudeInput.value = location.longitude;
 		accuracyInput.value = location.accuracy;
 		randomizationToggle.checked = location.toggleRandomization;
-	}
-
-	function locationSummary(location) {
-		return `${location.latitude}, ${location.longitude}`;
 	}
 
 	function renderTestResults(results) {
@@ -180,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			const name = document.createElement("strong");
 			name.textContent = location.name;
 			const coordinates = document.createElement("span");
-			coordinates.textContent = locationSummary(location);
+			coordinates.textContent = getFormattedLocation(location);
 			details.append(name, coordinates);
 
 			const controls = document.createElement("div");
@@ -231,7 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	async function removeLocation(index) {
 		const configuration = await getConfiguration();
 		configuration.savedLocations.splice(index, 1);
-		await browserApi.storage.local.set({ savedLocations: configuration.savedLocations });
+		await BrowserAPI.storage.local.set({ savedLocations: configuration.savedLocations });
 		renderSavedLocations(configuration.savedLocations);
 	}
 
@@ -249,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			1,
 		);
 		configuration.savedLocations.splice(targetIndex, 0, movedLocation);
-		await browserApi.storage.local.set({ savedLocations: configuration.savedLocations });
+		await BrowserAPI.storage.local.set({ savedLocations: configuration.savedLocations });
 		renderSavedLocations(configuration.savedLocations);
 	}
 
@@ -266,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			}
 
 			responseReceived = true;
-			browserApi.runtime.onMessage.removeListener(responseListener);
+			BrowserAPI.runtime.onMessage.removeListener(responseListener);
 
 			if (
 				Number.isFinite(message.lat)
@@ -282,11 +281,11 @@ document.addEventListener("DOMContentLoaded", () => {
 			}
 		};
 
-		browserApi.runtime.onMessage.addListener(responseListener);
-		browserApi.runtime.sendMessage({ type: "gs-map-request", requestId });
+		BrowserAPI.runtime.onMessage.addListener(responseListener);
+		BrowserAPI.runtime.sendMessage({ type: "gs-map-request", requestId });
 
 		setTimeout(() => {
-			browserApi.runtime.onMessage.removeListener(responseListener);
+			BrowserAPI.runtime.onMessage.removeListener(responseListener);
 			if (!responseReceived) {
 				alert("Could not get coords, do you have google maps open?");
 			}
@@ -302,7 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		testResultsDisplay.append(loading);
 
 		try {
-			const [tab] = await browserApi.tabs.query({
+			const [tab] = await BrowserAPI.tabs.query({
 				active: true,
 				currentWindow: true,
 			});
@@ -311,7 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				throw new Error("Could not find the active tab.");
 			}
 
-			const [execution] = await browserApi.scripting.executeScript({
+			const [execution] = await BrowserAPI.scripting.executeScript({
 				target: { tabId: tab.id },
 				world: "MAIN",
 				func: runTests,
@@ -331,7 +330,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	});
 
-	browserApi.storage.local.get(
+	BrowserAPI.storage.local.get(
 		["latitude", "longitude", "accuracy", "toggleRandomization", "enabled"],
 		() => {
 			updateStatus();
@@ -355,15 +354,14 @@ document.addEventListener("DOMContentLoaded", () => {
 			name: name.trim(),
 			...location,
 		});
-		await browserApi.storage.local.set({ savedLocations: configuration.savedLocations });
+		await BrowserAPI.storage.local.set({ savedLocations: configuration.savedLocations });
 		renderSavedLocations(configuration.savedLocations);
 	});
 
 	document.getElementById("confirmRawData").addEventListener("click", () => {
 		try {
 			const newData = JSON.parse(rawDataInput.value);
-			const activeLocation = normalizeLocation(newData.activeLocation)
-			    || normalizeLocation(newData);
+			const activeLocation = NormalizeLocation(newData.activeLocation) || NormalizeLocation(newData);
 
 			if (!activeLocation) {
 				throw BadCoordsError;
@@ -376,12 +374,12 @@ document.addEventListener("DOMContentLoaded", () => {
 				? newData.savedLocations
 					.map(location => ({
 						name: String(location?.name || "Unnamed location").trim(),
-						...normalizeLocation(location),
+						...NormalizeLocation(location),
 					}))
-					.filter(location => normalizeLocation(location))
+					.filter(location => NormalizeLocation(location))
 				: [];
 
-			browserApi.storage.local.set({
+			BrowserAPI.storage.local.set({
 				...activeLocation,
 				activeLocation,
 				savedLocations,
@@ -404,7 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			return;
 		}
 
-		browserApi.storage.local.set(
+		BrowserAPI.storage.local.set(
 			{
 				...location,
 				activeLocation: location,
@@ -423,7 +421,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		const { activeLocation } = data;
 
 		if (data.needsMigration) {
-			await browserApi.storage.local.set({
+			await BrowserAPI.storage.local.set({
 				...activeLocation,
 				activeLocation,
 				savedLocations: data.savedLocations,

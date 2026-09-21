@@ -6,9 +6,9 @@
 
 const EVENT_HOLDER = document.documentElement;
 
-const browserApi = typeof browser !== "undefined" ? browser : chrome;
+const BrowserAPI = typeof browser !== "undefined" ? browser : chrome;
 
-function parseEventDetail(event) {
+function ParseEventDetail(event) {
 	if (typeof event.detail !== "string") {
 		return null;
 	}
@@ -21,7 +21,7 @@ function parseEventDetail(event) {
 	}
 }
 
-function createEvent(name, detail) {
+function CreateEvent(name, detail) {
 	return new CustomEvent(name, { detail: JSON.stringify(detail) });
 }
 
@@ -32,7 +32,7 @@ async function getActualPosition() {
 }
 
 async function getFakePosition() {
-	const config = await browserApi.storage.local.get([
+	const config = await BrowserAPI.storage.local.get([
 		"latitude",
 		"longitude",
 		"accuracy",
@@ -60,13 +60,13 @@ async function getFakePosition() {
 	return data;
 }
 
-browserApi.runtime.onMessage.addListener((message) => {
+BrowserAPI.runtime.onMessage.addListener((message) => {
 	if (message?.type !== "gs-map-tab-request") {
 		return;
 	}
 
 	const responseListener = (event) => {
-		const detail = parseEventDetail(event);
+		const detail = ParseEventDetail(event);
 
 		if (detail?.requestId !== message.requestId) {
 			return;
@@ -76,7 +76,7 @@ browserApi.runtime.onMessage.addListener((message) => {
 			"gs-map-response",
 			responseListener,
 		);
-		browserApi.runtime.sendMessage({
+		BrowserAPI.runtime.sendMessage({
 			type: "gs-map-response",
 			requestId: message.requestId,
 			...detail,
@@ -88,18 +88,18 @@ browserApi.runtime.onMessage.addListener((message) => {
 		responseListener,
 	);
 	EVENT_HOLDER.dispatchEvent(
-		createEvent("gs-map-request", { requestId: message.requestId }),
+		CreateEvent("gs-map-request", { requestId: message.requestId }),
 	);
 });
 
 EVENT_HOLDER.addEventListener("gs-permission-request", async (e) => {
-	const detail = parseEventDetail(e);
+	const detail = ParseEventDetail(e);
 
 	if (!detail) {
 		return;
 	}
 
-	const config = await browserApi.storage.local.get(["enabled"]);
+	const config = await BrowserAPI.storage.local.get(["enabled"]);
 	let state = "denied";
 
 	if (config.enabled) {
@@ -118,7 +118,7 @@ EVENT_HOLDER.addEventListener("gs-permission-request", async (e) => {
 	}
 
 	EVENT_HOLDER.dispatchEvent(
-		createEvent("gs-permission-response", {
+		CreateEvent("gs-permission-response", {
 			permissionRequestId: detail.permissionRequestId,
 			state,
 		}),
@@ -154,7 +154,7 @@ function executeNativeGeolocation(method, args) {
 }
 
 EVENT_HOLDER.addEventListener("gs-validation-request", (e) => {
-	const detail = parseEventDetail(e);
+	const detail = ParseEventDetail(e);
 
 	if (!detail) {
 		return;
@@ -213,12 +213,12 @@ EVENT_HOLDER.addEventListener("gs-validation-request", (e) => {
 	}
 
 	EVENT_HOLDER.dispatchEvent(
-		createEvent("gs-validation-response", { validationId, error }),
+		CreateEvent("gs-validation-response", { validationId, error }),
 	);
 });
 
 EVENT_HOLDER.addEventListener("gs-request-cpos", async (e) => {
-	const detail = parseEventDetail(e);
+	const detail = ParseEventDetail(e);
 
 	if (!detail) {
 		return;
@@ -228,7 +228,7 @@ EVENT_HOLDER.addEventListener("gs-request-cpos", async (e) => {
 	let error;
 
 	try {
-		const config = await browserApi.storage.local.get([
+		const config = await BrowserAPI.storage.local.get([
 			"latitude",
 			"longitude",
 			"enabled",
@@ -251,7 +251,7 @@ EVENT_HOLDER.addEventListener("gs-request-cpos", async (e) => {
 	}
 
 	EVENT_HOLDER.dispatchEvent(
-		createEvent("gs-response-cpos", {
+		CreateEvent("gs-response-cpos", {
 			requestId: detail.requestId,
 			detail: data,
 			error,
@@ -260,7 +260,7 @@ EVENT_HOLDER.addEventListener("gs-request-cpos", async (e) => {
 });
 
 EVENT_HOLDER.addEventListener("gs-request-watchpos", async (e) => {
-	const detail = parseEventDetail(e);
+	const detail = ParseEventDetail(e);
 
 	if (!detail) {
 		return;
@@ -270,7 +270,7 @@ EVENT_HOLDER.addEventListener("gs-request-watchpos", async (e) => {
 	let error;
 
 	try {
-		const config = await browserApi.storage.local.get([
+		const config = await BrowserAPI.storage.local.get([
 			"latitude",
 			"longitude",
 			"enabled",
@@ -293,7 +293,7 @@ EVENT_HOLDER.addEventListener("gs-request-watchpos", async (e) => {
 	}
 
 	EVENT_HOLDER.dispatchEvent(
-		createEvent("gs-response-watchpos", {
+		CreateEvent("gs-response-watchpos", {
 			watcherId,
 			detail: data,
 			error,

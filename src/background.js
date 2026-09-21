@@ -2,10 +2,27 @@
 
 // This javascript files handling script injection for pages, and will inject into pages
 
-const browserApi = typeof browser !== "undefined" ? browser : chrome;
+const BrowserAPI = typeof browser !== "undefined" ? browser : chrome;
 
-browserApi.runtime.onInstalled.addListener(async () => {
-	const existingData = await browserApi.storage.local.get([
+const ExtensionScripts = [
+	{
+		id: "gs-client",
+		matches: ["*://*/*"],
+		world: "MAIN",
+		js: ["client.js"],
+		allFrames: true,
+	},
+	{
+		id: "gs-handler",
+		matches: ["*://*/*"],
+		world: "ISOLATED",
+		js: ["handler.js"],
+		allFrames: true,
+	},
+];
+
+BrowserAPI.runtime.onInstalled.addListener(async () => {
+	const existingData = await BrowserAPI.storage.local.get([
 		"latitude",
 		"longitude",
 		"accuracy",
@@ -13,7 +30,7 @@ browserApi.runtime.onInstalled.addListener(async () => {
 		"enabled",
 	]);
 
-	browserApi.storage.local.set({
+	BrowserAPI.storage.local.set({
 		latitude: existingData.latitude ?? 0,
 		longitude: existingData.longitude ?? 0,
 		accuracy: existingData.accuracy ?? 100,
@@ -22,39 +39,22 @@ browserApi.runtime.onInstalled.addListener(async () => {
 	});
 });
 
-browserApi.runtime.onInstalled.addListener(
+BrowserAPI.runtime.onInstalled.addListener(
 	async () => {
-		const scripts = [
-			{
-				id: "gs-client",
-				matches: ["*://*/*"],
-				world: "MAIN",
-				js: ["client.js"],
-				allFrames: true,
-			},
-			{
-				id: "gs-handler",
-				matches: ["*://*/*"],
-				world: "ISOLATED",
-				js: ["handler.js"],
-				allFrames: true,
-			},
-		];
-
-		await browserApi.scripting.unregisterContentScripts({
-			ids: scripts.map(({ id }) => id),
+		await BrowserAPI.scripting.unregisterContentScripts({
+			ids: ExtensionScripts.map(({ id }) => id),
 		}).catch(() => { });
 
-		await browserApi.scripting.registerContentScripts(scripts);
+		await BrowserAPI.scripting.registerContentScripts(ExtensionScripts);
 	},
 );
 
-browserApi.runtime.onMessage.addListener((message) => {
+BrowserAPI.runtime.onMessage.addListener((message) => {
 	if (message?.type !== "gs-map-request") {
 		return;
 	}
 
-	browserApi.tabs.query(
+	BrowserAPI.tabs.query(
 		{ url: ["*://*.google.com/maps*", "*://maps.google.com/*"] },
 		(tabs) => {
 			for (const tab of tabs) {
@@ -67,7 +67,7 @@ browserApi.runtime.onMessage.addListener((message) => {
 						...message,
 						type: "gs-map-tab-request",
 					})
-					.catch(() => {});
+					.catch(() => { });
 			}
 		},
 	);
