@@ -19,6 +19,7 @@ This is a geological location spoofer extension for web browsers
 ### Building
 To build from code, simply run the `build.mjs` file in the `build` directory.<br>
 Doing this will give you two zip files, one for Manifest V2 and another for Manifest V3
+- Note: the code does NOT change depending on MV2 or MV3, only the format of the manifest.json file.<br>Code is kept constant regardless of Manifest version.
 
 ### What makes this different from others?
 
