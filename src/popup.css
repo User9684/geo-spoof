@@ -467,12 +467,7 @@ input:focus {
 .advanced .button {
     min-height: 34px;
     margin-top: 8px;
-    background: #65737a;
     font-size: 12px;
-}
-
-.advanced .button:hover {
-    background: #56636a;
 }
 
 .status {
