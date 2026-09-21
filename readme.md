@@ -16,6 +16,10 @@ This is a geological location spoofer extension for web browsers
 - Firefox:
 - - [Install via AMO](https://addons.mozilla.org/en-US/firefox/addon/geolocation-spoofer)
 
+### Building
+To build from code, simply run the `build.mjs` file in the `build` directory.<br>
+Doing this will give you two zip files, one for Manifest V2 and another for Manifest V3
+
 ### What makes this different from others?
 
 Most all geographical location spoofers can easily be detected by one of many different [methods](./detection.md)
