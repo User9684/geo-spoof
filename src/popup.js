@@ -330,13 +330,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	});
 
-	BrowserAPI.storage.local.get(
-		["latitude", "longitude", "accuracy", "toggleRandomization", "enabled"],
-		() => {
-			updateStatus();
-		},
-	);
-
 	document.getElementById("saveLocation").addEventListener("click", async () => {
 		const location = getLocationFromForm();
 		if (!location) {
@@ -446,4 +439,11 @@ document.addEventListener("DOMContentLoaded", () => {
 			}.
         `.trim();
 	}
+
+	BrowserAPI.storage.local.get(
+		["latitude", "longitude", "accuracy", "toggleRandomization", "enabled"],
+		() => {
+			updateStatus();
+		},
+	);
 });
