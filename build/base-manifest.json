@@ -1,6 +1,6 @@
 {
     "name": "Geolocation Spoofer",
-    "version": "1.7.4",
+    "version": "1.7.5",
     "description": "Spoof geolocation based on custom latitude and longitude.",
     "permissions": [
         "scripting",
@@ -21,5 +21,6 @@
                 ]
             }
         }
-    }
+    },
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0vc4+80XxG4bQYWv1+NWPs2JrDIGlSzevKDhFYiQedyzpIAm/vUa1S+CeyrMZQhg2zk3RudQRnXmMYHtSDha3eRWuhf3+YICroBvxAhGUZW2ssSl891W+dbfZe2PA2HE3qrklHf+BQbPod6a7zE/N/trEgsX+CtJ7bhJAviWIN7Y7mr+5keawK3FBQDdtS2BwvRdlqLNobL+0tIku+f90/fVYh42xeOQM6Uf64ep55OoQUrerSeSQamnGvaImFC24yavcCw9rT8s+Hj12ta1l7Z79dM3cYF0KmxffdRatyWHhGpKvS2vQ4hNebBsJeGgMCLOBvtpmNi/l1YASQdRMwIDAQAB"
 }
