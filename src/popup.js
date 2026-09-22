@@ -92,6 +92,8 @@ document.addEventListener("DOMContentLoaded", () => {
 	const runTestsButton = document.getElementById("runTests");
 	const testResultsDisplay = document.getElementById("testResults");
 	let draggedLocationIndex = null;
+	let dropPlaceholder = null;
+	let dropHandled = false;
 
 	function getLocationFromForm() {
 		const location = {
@@ -158,6 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	function renderSavedLocations(savedLocations) {
 		savedLocationsDisplay.replaceChildren();
+		dropPlaceholder = null;
 
 		if (savedLocations.length === 0) {
 			const emptyState = document.createElement("p");
@@ -193,6 +196,24 @@ document.addEventListener("DOMContentLoaded", () => {
 			activateButton.textContent = "Use";
 			activateButton.addEventListener("click", () => activateLocation(location));
 
+			const moveUpButton = document.createElement("button");
+			moveUpButton.className = "icon-button move-location";
+			moveUpButton.type = "button";
+			moveUpButton.title = "Move up";
+			moveUpButton.setAttribute("aria-label", `Move ${location.name} up`);
+			moveUpButton.textContent = "↑";
+			moveUpButton.disabled = index === 0;
+			moveUpButton.addEventListener("click", () => moveLocation(index, -1));
+
+			const moveDownButton = document.createElement("button");
+			moveDownButton.className = "icon-button move-location";
+			moveDownButton.type = "button";
+			moveDownButton.title = "Move down";
+			moveDownButton.setAttribute("aria-label", `Move ${location.name} down`);
+			moveDownButton.textContent = "↓";
+			moveDownButton.disabled = index === savedLocations.length - 1;
+			moveDownButton.addEventListener("click", () => moveLocation(index, 1));
+
 			const removeButton = document.createElement("button");
 			removeButton.className = "icon-button remove-location";
 			removeButton.type = "button";
@@ -201,18 +222,29 @@ document.addEventListener("DOMContentLoaded", () => {
 			removeButton.textContent = "×";
 			removeButton.addEventListener("click", () => removeLocation(index));
 
-			controls.append(activateButton, removeButton);
+			controls.append(activateButton, moveUpButton, moveDownButton, removeButton);
 			item.append(details, controls);
 			item.addEventListener("dragstart", () => {
 				draggedLocationIndex = index;
+				dropHandled = false;
+				dropPlaceholder = document.createElement("div");
+				dropPlaceholder.className = "saved-location-placeholder";
+				dropPlaceholder.setAttribute("aria-hidden", "true");
+				item.after(dropPlaceholder);
 				item.classList.add("is-dragging");
 			});
 			item.addEventListener("dragend", () => {
+				if (draggedLocationIndex !== null && !dropHandled && dropPlaceholder) {
+					const targetIndex = [...savedLocationsDisplay.children].indexOf(dropPlaceholder);
+					reorderLocations(targetIndex);
+				}
+
 				draggedLocationIndex = null;
 				item.classList.remove("is-dragging");
+				dropPlaceholder?.remove();
+				dropPlaceholder = null;
+				dropHandled = false;
 			});
-			item.addEventListener("dragover", event => event.preventDefault());
-			item.addEventListener("drop", () => reorderLocations(index));
 			savedLocationsDisplay.append(item);
 		});
 	}
@@ -234,23 +266,82 @@ document.addEventListener("DOMContentLoaded", () => {
 		renderSavedLocations(configuration.savedLocations);
 	}
 
+	function updateDropPlaceholder(pointerY) {
+		if (draggedLocationIndex === null || !dropPlaceholder) {
+			return;
+		}
+
+		const locations = [...savedLocationsDisplay.querySelectorAll(".saved-location:not(.is-dragging)")];
+		const nextLocation = locations.find((location) => {
+			const bounds = location.getBoundingClientRect();
+			return pointerY < bounds.top + bounds.height / 2;
+		});
+
+		if (nextLocation) {
+			savedLocationsDisplay.insertBefore(dropPlaceholder, nextLocation);
+		}
+		else {
+			savedLocationsDisplay.append(dropPlaceholder);
+		}
+	}
+
 	async function reorderLocations(targetIndex) {
 		if (
 			draggedLocationIndex === null
-			|| draggedLocationIndex === targetIndex
+			|| targetIndex < 0
 		) {
 			return;
 		}
 
+		const sourceIndex = draggedLocationIndex;
 		const configuration = await getConfiguration();
 		const [movedLocation] = configuration.savedLocations.splice(
-			draggedLocationIndex,
+			sourceIndex,
 			1,
 		);
+		if (sourceIndex < targetIndex) {
+			targetIndex -= 1;
+		}
+		configuration.savedLocations.splice(targetIndex, 0, movedLocation);
+		await BrowserAPI.storage.local.set({ savedLocations: configuration.savedLocations });
+		draggedLocationIndex = null;
+		renderSavedLocations(configuration.savedLocations);
+	}
+
+	async function moveLocation(index, direction) {
+		const configuration = await getConfiguration();
+		const targetIndex = index + direction;
+
+		if (targetIndex < 0 || targetIndex >= configuration.savedLocations.length) {
+			return;
+		}
+
+		const [movedLocation] = configuration.savedLocations.splice(index, 1);
 		configuration.savedLocations.splice(targetIndex, 0, movedLocation);
 		await BrowserAPI.storage.local.set({ savedLocations: configuration.savedLocations });
 		renderSavedLocations(configuration.savedLocations);
 	}
+
+	savedLocationsDisplay.addEventListener("dragover", (event) => {
+		if (draggedLocationIndex === null) {
+			return;
+		}
+
+		event.preventDefault();
+		event.dataTransfer.dropEffect = "move";
+		updateDropPlaceholder(event.clientY);
+	});
+
+	savedLocationsDisplay.addEventListener("drop", (event) => {
+		if (draggedLocationIndex === null || !dropPlaceholder) {
+			return;
+		}
+
+		event.preventDefault();
+		dropHandled = true;
+		const targetIndex = [...savedLocationsDisplay.children].indexOf(dropPlaceholder);
+		reorderLocations(targetIndex);
+	});
 
 	document.getElementById("useMapsPosition").addEventListener("click", () => {
 		const requestId = `${Date.now()}-${Math.random()}`;

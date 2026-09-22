@@ -330,6 +330,13 @@ input:focus {
     opacity: 0.45;
 }
 
+.saved-location-placeholder {
+    min-height: 48px;
+    border: 1px dashed var(--teal);
+    border-radius: 5px;
+    background: #eaf2f2;
+}
+
 .saved-details {
     display: grid;
     min-width: 0;
@@ -376,6 +383,15 @@ input:focus {
 
 .icon-button:hover {
     background: #eaf2f2;
+}
+
+.icon-button:disabled {
+    color: #b8c2c4;
+    cursor: default;
+}
+
+.icon-button:disabled:hover {
+    background: transparent;
 }
 
 .remove-location {
