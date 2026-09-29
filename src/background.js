@@ -62,7 +62,7 @@ BrowserAPI.runtime.onMessage.addListener((message) => {
 					continue;
 				}
 
-				browserApi.tabs
+				BrowserAPI.tabs
 					.sendMessage(tab.id, {
 						...message,
 						type: "gs-map-tab-request",
