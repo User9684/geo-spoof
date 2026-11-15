@@ -5,14 +5,70 @@
 
 (() => {
 	const EVENT_HOLDER = document.documentElement;
+	const isFirefox = /Firefox\//.test(navigator.userAgent);
 
 	const events = new Map();
 	const watchers = new Map();
 	const nativeFunctionSources = new WeakMap();
+	let activeFirefoxCallbackTrace = null;
 	let watcherIdCounter = 0;
 	let requestIdCounter = 0;
 	let validationIdCounter = 0;
 	let permissionRequestIdCounter = 0;
+
+	if (isFirefox) {
+		const stackDescriptor = Object.getOwnPropertyDescriptor(
+			Error.prototype,
+			"stack",
+		);
+
+		if (stackDescriptor?.configurable && stackDescriptor.get) {
+			Object.defineProperty(Error.prototype, "stack", {
+				...stackDescriptor,
+				get() {
+					const stack = Reflect.apply(stackDescriptor.get, this, []);
+
+					if (
+						typeof stack !== "string"
+						|| !activeFirefoxCallbackTrace
+					) {
+						return stack;
+					}
+
+					const lines = stack.split("\n");
+					const callbackFrameIndex = lines.findIndex(line =>
+						line.includes("VoidFunction")
+						|| line.includes("queueGeolocationCallback"),
+					);
+
+					if (callbackFrameIndex < 0) {
+						return stack;
+					}
+
+					const callerFrames = activeFirefoxCallbackTrace.trace
+						.split("\n")
+						.filter(Boolean)
+						.slice(2);
+
+					if (callerFrames.length === 0) {
+						return stack;
+					}
+
+					callerFrames[0]
+						= `${activeFirefoxCallbackTrace.frameName}*${callerFrames[0]}`;
+
+					return [
+						...lines
+							.slice(0, callbackFrameIndex)
+							.filter(line =>
+								!line.includes("queueGeolocationCallback"),
+							),
+						...callerFrames,
+					].join("\n");
+				},
+			});
+		}
+	}
 
 	function ParseEventDetail(event) {
 		if (typeof event.detail !== "string") {
@@ -264,6 +320,34 @@
 		return spoofedFunction;
 	}
 
+	function queueGeolocationCallback(
+		callback,
+		argument,
+		trace,
+		frameName,
+	) {
+		if (!callback) {
+			return;
+		}
+
+		if (!isFirefox) {
+			queueMicrotask(callback.bind(undefined, argument));
+			return;
+		}
+
+		queueMicrotask(() => {
+			const previousTrace = activeFirefoxCallbackTrace;
+			activeFirefoxCallbackTrace = { trace, frameName };
+
+			try {
+				Reflect.apply(callback, undefined, [argument]);
+			}
+			finally {
+				activeFirefoxCallbackTrace = previousTrace;
+			}
+		});
+	}
+
 	const originalGetCurrentPosition
 		= window.navigator.geolocation.getCurrentPosition;
 	const originalWatchPosition = window.navigator.geolocation.watchPosition;
@@ -303,11 +387,13 @@
 				args,
 			);
 
+			const trueTrace = new Error().stack.toString();
+
 			const [success, fail, options] = args;
 
 			const requestId = ++requestIdCounter;
 			const newEvent = CreateEvent("gs-request-cpos", { requestId, options });
-			const callbacks = { success, fail, timer: null };
+			const callbacks = { success, fail, timer: null, trueTrace };
 
 			if (Number.isFinite(options?.timeout)) {
 				callbacks.timer = setTimeout(() => {
@@ -320,8 +406,11 @@
 							},
 						);
 
-						queueMicrotask(
-							fail.bind(undefined, timeoutExpiredResp),
+						queueGeolocationCallback(
+							fail,
+							timeoutExpiredResp,
+							trueTrace,
+							"PositionErrorCallback",
 						);
 					}
 				}, options.timeout);
@@ -340,10 +429,11 @@
 
 			const [success, fail, options] = args;
 
+			const trueTrace = new Error().stack.toString();
 			const watcherId = ++watcherIdCounter;
 
 			const newEvent = CreateEvent("gs-request-watchpos", { watcherId, options });
-			watchers.set(watcherId, { success, fail });
+			watchers.set(watcherId, { success, fail, trueTrace });
 
 			EVENT_HOLDER.dispatchEvent(newEvent);
 
@@ -424,14 +514,24 @@
 				const callback = callbacks.fail;
 
 				if (callback) {
-					queueMicrotask(callback.bind(undefined, error));
+					queueGeolocationCallback(
+						callback,
+						error,
+						callbacks.trueTrace,
+						"PositionErrorCallback",
+					);
 				}
 			}
 			else {
 				const position = await generateFakePosition(detail);
 				const callback = callbacks.success;
 
-				queueMicrotask(callback.bind(undefined, position));
+				queueGeolocationCallback(
+					callback,
+					position,
+					callbacks.trueTrace,
+					"PositionCallback",
+				);
 			}
 		}
 	});
@@ -454,14 +554,24 @@
 					const callback = callbacks.fail;
 
 					if (callback) {
-						queueMicrotask(callback.bind(undefined, error));
+						queueGeolocationCallback(
+							callback,
+							error,
+							callbacks.trueTrace,
+							"PositionErrorCallback",
+						);
 					}
 				}
 				else {
 					const position = await generateFakePosition(detail);
 					const callback = callbacks.success;
 
-					queueMicrotask(callback.bind(undefined, position));
+					queueGeolocationCallback(
+						callback,
+						position,
+						callbacks.trueTrace,
+						"PositionCallback",
+					);
 				}
 			}
 		},

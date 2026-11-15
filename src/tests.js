@@ -4,6 +4,11 @@
 // It runs all of the listed tests and returns an object with the results of each one.
 
 export async function runTests() {
+	// Not a secure way to check for Firefox, just used for quick debug tests!
+	// If you're writing a behavior check & use this as a reference, you should use other browser detection methods
+	// for firefox specific detections.
+	const isFirefox = /Firefox\//.test(navigator.userAgent);
+
 	function getNativeCodeString(fnName) {
 		// This is done because on FireFox, native code has newlines!
 		let baseToStringOutput = toString.toString();
@@ -166,6 +171,32 @@ export async function runTests() {
 		});
 		*/
 	})();
+
+	// Register firefox-specific tests
+	if (isFirefox) {
+		registerTest("Error frames", "geolocationAPI", (geolocationAPI) => {
+			return new Promise((resolve) => {
+				function checkErrorFrame(frameName) {
+					try {
+						new Proxy(); // Throw an error without utilizing the Error constructor
+					}
+					catch (error) {
+						const expectedFrame = `${frameName}*`;
+						const passed = error.stack?.includes(expectedFrame) ?? false;
+						resolve([
+							passed,
+							passed ? null : `Expected error stack to include "${expectedFrame}"`,
+						]);
+					}
+				}
+
+				geolocationAPI.getCurrentPosition(
+					() => checkErrorFrame("PositionCallback"),
+					() => checkErrorFrame("PositionErrorCallback"),
+				);
+			});
+		});
+	}
 
 	const geolocationAPI = navigator.geolocation;
 	let geolocation = null;

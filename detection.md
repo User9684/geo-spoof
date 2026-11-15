@@ -164,3 +164,34 @@ Promise.all([
 ```
 
 </details>
+
+<details>
+<summary>Firefox Error Frames Method</summary>
+
+Extension Status: <b>Patched</b>
+
+On Firefox specifically, error traces reveal their source function even when ran in a microtask, and non-patched functions have a "frame name", of which can be checked against.
+
+```js
+function test(expectedName) {
+	return () => {
+		try {
+			new Proxy();
+		}
+		catch (e) {
+			let stack = e.stack;
+			if (!stack.includes(`${expectedName}*stack@`)) {
+				console.log("Missing proper error frame name!");
+			}
+		}
+	};
+}
+
+function stack() {
+	navigator.geolocation.getCurrentPosition(test("PositionCallback"), test("PositionErrorCallback"))
+};
+
+stack();
+```
+
+</details>
